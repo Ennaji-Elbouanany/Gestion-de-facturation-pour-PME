@@ -22,7 +22,16 @@ function ForgotPassword({ onLoginClick }) {
         },
         body: JSON.stringify({ email }),
       })
-      const result = await response.json()
+      const responseText = await response.text()
+      let result = {}
+
+      if (responseText.trim()) {
+        try {
+          result = JSON.parse(responseText)
+        } catch {
+          throw new Error(`Le serveur a renvoyé une réponse invalide (HTTP ${response.status}).`)
+        }
+      }
 
       if (!response.ok) {
         const validationMessage = result.errors
@@ -31,7 +40,7 @@ function ForgotPassword({ onLoginClick }) {
         throw new Error(validationMessage || 'Impossible d\'envoyer le lien.')
       }
 
-      setMessage(result.message)
+      setMessage(result.message || 'Le lien de réinitialisation a été envoyé par e-mail.')
     } catch (error) {
       setMessage(error.message || 'Une erreur est survenue. Réessayez.')
     } finally {

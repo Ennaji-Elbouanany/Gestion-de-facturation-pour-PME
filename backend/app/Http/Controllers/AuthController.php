@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 
 class AuthController extends Controller
@@ -18,17 +19,35 @@ class AuthController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        $status = Password::sendResetLink($data);
+        try {
+            $status = Password::sendResetLink($data);
+        } catch (\Throwable $e) {
+            Log::error('Échec envoi du lien de réinitialisation.', [
+                'email' => $data['email'],
+                'exception' => $e,
+            ]);
 
-        if ($status !== Password::RESET_LINK_SENT) {
             return response()->json([
-                'message' => 'Impossible d’envoyer le lien de réinitialisation.',
-            ], 422);
+                'message' => 'Une erreur technique est survenue lors de l’envoi du lien. Vérifiez la configuration de messagerie (SMTP).',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json([
+                'message' => 'Si cette adresse existe, un lien de réinitialisation a été envoyé par e-mail.',
+            ]);
+        }
+
+        if ($status === Password::RESET_THROTTLED) {
+            return response()->json([
+                'message' => 'Trop de tentatives. Veuillez patienter une minute avant de réessayer.',
+            ], 429);
         }
 
         return response()->json([
-            'message' => 'Si cette adresse existe, un lien de réinitialisation a été envoyé par e-mail.',
-        ]);
+            'message' => 'Impossible d’envoyer le lien de réinitialisation. Vérifiez que l’adresse e-mail est correcte.',
+        ], 422);
     }
 
     public function resetPassword(Request $request): JsonResponse
@@ -43,7 +62,7 @@ class AuthController extends Controller
             $data,
             function (User $user, string $password): void {
                 $user->forceFill([
-                    'password' => $password,
+                    'password' => Hash::make($password),
                 ])->save();
 
                 $user->tokens()->delete();
@@ -114,7 +133,7 @@ class AuthController extends Controller
                 'company_id' => $company->id,
                 'name' => $data['name'],
                 'email' => $data['email'],
-                'password' => $data['password'],
+                'password' => Hash::make($data['password']),
                 'role' => $data['role'],
             ]);
 

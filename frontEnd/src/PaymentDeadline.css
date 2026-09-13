@@ -1,0 +1,1 @@
+.invoice-due-date{display:grid;gap:3px}.invoice-due-date small{font-size:9px;font-weight:700}.invoice-due-date.overdue,.invoice-due-date.due-soon{color:#c73f3f;font-weight:700}.invoice-due-date.overdue small,.invoice-due-date.due-soon small{color:#c73f3f}

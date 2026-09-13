@@ -92,7 +92,7 @@ class InvoiceController extends Controller
         $this->ensureBelongsToCompany($request, $invoice);
 
         $data = $request->validate([
-            'status' => ['required', 'string', 'in:draft,sent,paid,overdue,cancelled'],
+            'status' => ['required', 'string', 'in:draft,sent,paid,partial,overdue,cancelled'],
         ]);
 
         $invoice->update(['status' => $data['status']]);
@@ -106,7 +106,7 @@ class InvoiceController extends Controller
             'client_id' => ['required', 'integer', 'exists:clients,id'],
             'invoice_date' => ['required', 'date'],
             'due_date' => ['nullable', 'date', 'after_or_equal:invoice_date'],
-            'status' => ['sometimes', 'string', 'in:draft,sent,paid,overdue,cancelled'],
+            'status' => ['sometimes', 'string', 'in:draft,sent,paid,partial,overdue,cancelled'],
             'notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['nullable', 'integer', 'exists:products,id'],

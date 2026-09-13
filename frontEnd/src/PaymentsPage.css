@@ -1,0 +1,62 @@
+/* =========================================================
+   Paiements — page dédiée (Trésorerie)
+   Complète Payments.css (composant de gestion par facture)
+   ========================================================= */
+
+.payments-page{display:grid;gap:18px;align-content:start}
+.payments-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:12px}
+.payments-heading h1{margin:10px 0 5px;color:#1c2c26;font-family:Georgia,serif;font-size:34px;line-height:1.1;letter-spacing:-.03em}
+.payments-subtitle{margin:0;color:#86928b;font-size:13px}
+.payments-message{margin:0;padding:12px 16px;border:1px solid #d8ecd9;border-radius:9px;background:#f2faf2;color:#3f7d5a;font-size:12px}
+
+/* ---------- Indicateurs clés de trésorerie ---------- */
+.pay-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.pay-kpi{border:1px solid #e3e8e3;border-radius:10px;background:#fff;padding:18px 18px 14px;display:grid;gap:6px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(23,35,31,.03)}
+.pay-kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
+.pay-kpi--green::before{background:#4ca375}
+.pay-kpi--blue::before{background:#5b8ed1}
+.pay-kpi--orange::before{background:#e08a4e}
+.pay-kpi--purple::before{background:#8f6ad0}
+.pay-kpi__label{color:#83908a;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.pay-kpi strong{color:#1d2e27;font-family:Georgia,serif;font-size:22px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pay-kpi small{color:#9aa49e;font-size:11px}
+
+/* ---------- Répartition par mode de paiement ---------- */
+.pay-method-chips{display:flex;flex-wrap:wrap;gap:10px}
+.pay-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid #e6eae6;border-radius:999px;background:#fff;color:#65736c;font-size:11px}
+.pay-chip i{width:8px;height:8px;border-radius:50%}
+.pay-chip strong{color:#33443c}
+
+/* ---------- Panneau de liste ---------- */
+.pay-list-panel{margin-bottom:0;min-width:0}
+.pay-toolbar{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:12px;margin:18px 0 8px}
+.pay-filter{display:grid;gap:6px;color:#65736c;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.pay-filter input,.pay-filter select{min-height:38px;padding:0 11px;border:1px solid #dce3dd;border-radius:5px;background:#fcfdfc;color:#283830;font:inherit;font-size:12px}
+.pay-filter input:focus,.pay-filter select:focus{outline:2px solid #e9794d;outline-offset:1px;border-color:#e9794d}
+
+/* ---------- Tableau des règlements ---------- */
+.payment-row--page{grid-template-columns:.9fr 1.1fr 1.4fr 1.4fr 1fr .85fr .7fr;min-height:54px}
+.payment-row-head--page{min-height:29px;border-top:0}
+.pay-method-cell{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.pay-method-dot{width:8px;height:8px;border-radius:50%}
+.pay-amount{color:#33443c!important;font-size:12px}
+.pay-actions{display:flex;gap:6px}
+.pay-actions button{border:1px solid #e4c2bd;border-radius:5px;background:#fff;color:#b5564f;cursor:pointer;display:grid;place-items:center;min-height:30px;padding:0 10px;font:inherit;font-size:10px}
+.pay-actions button:hover{background:#fdf3f1}
+.pay-actions button:disabled{opacity:.5;cursor:default}
+
+/* ---------- États vides / chargement ---------- */
+.refresh-button:disabled{opacity:.55;cursor:default}
+.empty-state{display:block;margin:22px 0 6px;color:#a1aaa5;font-size:12px;text-align:center}
+
+/* ---------- Responsive ---------- */
+@media (max-width:1100px){
+  .pay-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pay-toolbar{grid-template-columns:1fr}
+}
+@media (max-width:760px){
+  .pay-kpi-grid{grid-template-columns:1fr}
+  .payments-heading,.payments-panel-heading{align-items:flex-start;flex-direction:column}
+  .payments-history,.payments-table{overflow:auto}
+  .payment-row--page{grid-template-columns:.9fr 1.1fr 1.4fr 1.4fr 1fr .85fr 135px;min-width:860px}
+}

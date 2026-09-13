@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\QuoteItemController;
@@ -20,6 +21,8 @@ Route::middleware('auth:sanctum')->apiResource('clients', ClientController::clas
 Route::middleware('auth:sanctum')->apiResource('products', ProductController::class);
 Route::middleware('auth:sanctum')->apiResource('invoices', InvoiceController::class);
 Route::middleware('auth:sanctum')->patch('/invoices/{invoice}/status', [InvoiceController::class, 'updateStatus']);
+Route::middleware('auth:sanctum')->apiResource('invoices.payments', PaymentController::class)->scoped()->parameters(['payments' => 'payment']);
+Route::middleware('auth:sanctum')->get('/payments', [PaymentController::class, 'all']);
 Route::middleware('auth:sanctum')->apiResource('quotes', QuoteController::class);
 Route::middleware('auth:sanctum')->patch('/quotes/{quote}/status', [QuoteController::class, 'updateStatus']);
 Route::middleware('auth:sanctum')->post('/quotes/{quote}/convert', [QuoteController::class, 'convertToInvoice']);

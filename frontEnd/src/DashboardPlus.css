@@ -1,0 +1,173 @@
+/* =========================================================
+   Tableau de bord — styles additionnels (Overview)
+   Complète Dashboard.css (shell, sidebar, header, boutons)
+   ========================================================= */
+
+.dash-overview{display:grid;gap:20px;align-content:start}
+
+/* ---------- Indicateurs clés (KPI) ---------- */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.kpi-card{border:1px solid #e3e8e3;border-radius:10px;background:#fff;padding:20px 18px 16px;display:grid;gap:6px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(23,35,31,.03)}
+.kpi-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:transparent}
+.kpi-card--green::before{background:#4ca375}
+.kpi-card--blue::before{background:#5b8ed1}
+.kpi-card--orange::before{background:#e08a4e}
+.kpi-card--red::before{background:#d1605c}
+.kpi-card__head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.kpi-card__label{color:#83908a;font-size:11px;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
+.kpi-card__icon{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;font-size:15px;flex:0 0 28px}
+.kpi-icon--green{background:#e1f2e9;color:#50a67d}
+.kpi-icon--blue{background:#e8f0fb;color:#6294c8}
+.kpi-icon--orange{background:#fff0e7;color:#e47a52}
+.kpi-icon--red{background:#fde7e4;color:#d1605c}
+.kpi-card__value{display:block;margin:8px 0 2px;color:#1d2e27;font-family:Georgia,serif;font-size:26px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-card__value--danger{color:#d1605c}
+.kpi-card__foot{margin:0;color:#9aa49e;font-size:11px}
+.kpi-card__foot .trend{font-weight:700;margin-right:4px}
+.kpi-card__sub{margin:0;color:#b0b9b4;font-size:10px}
+.trend.is-up{color:#4ca375}
+.trend.is-down{color:#d1605c}
+.trend.is-flat{color:#93a19a}
+
+/* ---------- Bandeau de statistiques ---------- */
+.stats-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.stat-chip{border:1px solid #e6eae6;border-radius:10px;background:#fff;padding:14px 18px 12px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;box-shadow:0 1px 2px rgba(23,35,31,.03)}
+.stat-chip__label{color:#93a19a;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em}
+.stat-chip strong{color:#1d2e27;font-family:Georgia,serif;font-size:24px;margin-left:auto}
+.stat-chip small{width:100%;color:#9aa49e;font-size:11px}
+.stat-chip small em{font-style:normal}
+
+/* ---------- Grilles de cartes ---------- */
+.charts-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px}
+.panels-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.chart-card,.panel-card{border:1px solid #e3e8e3;border-radius:10px;background:#fff;padding:20px 20px 18px;min-width:0;box-shadow:0 1px 2px rgba(23,35,31,.03)}
+.panel-card--wide{grid-column:span 2}
+.chart-card__head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:16px}
+.chart-card__head h2{margin:0 0 4px;color:#273831;font-family:Georgia,serif;font-size:17px}
+.chart-card__head p{margin:0;color:#a1aaa5;font-size:11px}
+.text-link{border:0;background:transparent;color:#dd7650;cursor:pointer;font:inherit;font-size:11px;font-weight:700;white-space:nowrap}
+.text-link span{font-size:15px}
+.chart-legend{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.legend-item{display:inline-flex;align-items:center;gap:7px;color:#78857e;font-size:11px}
+.legend-dot{width:9px;height:9px;border-radius:3px}
+.legend-dot--a{background:#e98a5f}
+.legend-dot--b{background:#4ca375}
+/* ---------- Graphique en barres ---------- */
+.bar-chart{width:100%;height:auto;display:block}
+.chart-gridline{stroke:#eef1ef;stroke-width:1}
+.chart-axis-label{fill:#a4ada8;font-family:inherit;font-size:9px}
+.chart-x-label{fill:#78857e;font-family:inherit;font-size:10px}
+.chart-bar{transition:opacity .15s ease}
+.chart-bar:hover{opacity:.78}
+.chart-bar-a{fill:#e98a5f}
+.chart-bar-b{fill:#4ca375}
+
+/* ---------- Donut ---------- */
+.donut-chart-wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.donut-chart{width:172px;height:172px;max-width:52%}
+.donut-track{stroke:#eef1ef}
+.donut-center-value{fill:#1d2e27;font-family:Georgia,serif;font-size:15px}
+.donut-center-label{fill:#93a19a;font-family:inherit;font-size:9px;text-transform:uppercase;letter-spacing:.06em}
+.donut-legend{display:grid;gap:8px;flex:1;min-width:170px}
+.dlegend-row{display:flex;align-items:center;gap:8px;color:#65736c;font-size:11px;min-width:0}
+.dlegend-dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+.dlegend-row>span:nth-child(2){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dlegend-row b{margin-left:auto;color:#33443c;font-size:11px;white-space:nowrap}
+.dlegend-row em{font-style:normal;color:#93a19a;font-size:10px;width:38px;text-align:right}
+.donut-empty{display:grid;place-items:center;min-height:140px;color:#a1aaa5;font-size:12px;border:1px dashed #e3e8e3;border-radius:8px}
+
+/* ---------- Classements ---------- */
+.rank-list{display:grid;gap:14px}
+.rank-item{display:flex;align-items:center;gap:12px;min-width:0}
+.rank-pos{display:grid;place-items:center;width:22px;height:22px;flex:0 0 22px;border-radius:6px;background:#f3f0ec;color:#a08d82;font-size:10px;font-weight:700}
+.rank-main{flex:1;min-width:0}
+.rank-top{display:flex;justify-content:space-between;gap:12px;margin-bottom:5px}
+.rank-top strong{color:#405049;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-top b{color:#33443c;font-size:11px;white-space:nowrap}
+.rank-track{height:7px;background:#f0f3f0;border-radius:6px;overflow:hidden}
+.rank-fill{display:block;height:100%;border-radius:inherit}
+.rank-main small{display:block;margin-top:4px;color:#a1aaa5;font-size:10px}
+
+/* ---------- Tableaux ---------- */
+.dash-table{display:grid}
+.dash-row{display:grid;grid-template-columns:1.1fr 1.3fr .9fr 1fr .9fr;align-items:center;gap:10px;min-height:50px;border-top:1px solid #eef1ef;color:#78857e;font-size:11px}
+.dash-row--head{min-height:26px;border-top:0;color:#a4ada8;font-size:9px;font-weight:700;letter-spacing:.07em}
+.dash-row--payments{grid-template-columns:1fr 1.2fr 1.4fr 1fr}
+.dash-row>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dash-row strong{color:#33443c;font-size:11px;white-space:nowrap}
+
+/* ---------- Badges de statut ---------- */
+.dash-badge{padding:4px 9px;border-radius:999px;justify-self:start;font-size:9px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.dash-badge--paid{background:#e2f3e8;color:#3f8f66}
+.dash-badge--partial{background:#e7effb;color:#4a78b4}
+.dash-badge--sent{background:#fff0e3;color:#cf7a45}
+.dash-badge--draft{background:#eef1ef;color:#7d8b84}
+.dash-badge--overdue{background:#fde5e3;color:#c25550}
+.dash-badge--cancelled{background:#f0efec;color:#92968e}
+
+/* ---------- Échéances & retards ---------- */
+.due-list{display:grid;gap:0}
+.due-heading{margin:8px 0 2px;color:#a1aaa5;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.due-heading--late{color:#d1605c}
+.due-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #eef1ef;min-width:0}
+.due-item__main{flex:1;min-width:0}
+.due-item__main strong{display:block;font-size:11px;color:#405049;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.due-item__main small{display:block;margin-top:2px;font-size:10px;color:#93a19a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.due-item__due{font-size:10px;color:#86928b;white-space:nowrap}
+.due-item--late .due-item__due{color:#d1605c;font-weight:700}
+.due-amount{font-size:11px;color:#33443c;white-space:nowrap}
+.due-item--late .due-amount{color:#d1605c}
+
+/* ---------- Fil d'activité ---------- */
+.feed{display:grid}
+.feed-item{display:flex;align-items:flex-start;gap:11px;padding:12px 0;border-top:1px solid #eef1ef;min-width:0}
+.feed-badge{display:grid;place-items:center;width:27px;height:27px;flex:0 0 27px;border-radius:50%;font-size:12px}
+.feed-badge--payment{background:#e0f3e7;color:#4ba276}
+.feed-badge--invoice{background:#fff0e3;color:#df7c53}
+.feed-badge--client{background:#e8f0fb;color:#6592c2}
+.feed-badge--quote{background:#f0e9fb;color:#8f6ad0}
+.feed-item p{min-width:0;flex:1}
+.feed-item strong{display:block;margin-bottom:3px;color:#405049;font-size:11px}
+.feed-item p span{display:block;overflow:hidden;color:#8b9891;font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.feed-item p small{display:block;margin-top:4px;color:#b1b9b4;font-size:9px}
+.feed-item>b{color:#4ca375;font-size:11px;white-space:nowrap;padding-top:2px}
+.feed-item--quote>b{color:#33443c}
+
+/* ---------- États vides / erreurs / chargement ---------- */
+.dash-empty{border:1px dashed #d5ddd7;border-radius:12px;background:#fff;padding:54px 30px;text-align:center;display:grid;gap:10px;justify-items:center}
+.dash-empty__icon{display:grid;place-items:center;width:54px;height:54px;border-radius:16px;background:#fff3ed;color:#e9794d;font-size:24px}
+.dash-empty h2{margin:6px 0 0;color:#273831;font-family:Georgia,serif;font-size:20px}
+.dash-empty p{margin:0;color:#86928b;font-size:12px;max-width:460px}
+.dash-empty__actions{display:flex;align-items:center;gap:16px;margin-top:8px;flex-wrap:wrap;justify-content:center}
+.dash-empty-text{margin:10px 0;color:#a1aaa5;font-size:12px}
+.dash-error{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid #f5d9d5;border-radius:9px;background:#fdf3f1;color:#b5564f;font-size:12px}
+.dash-error p{margin:0;flex:1}
+.dash-error button{border:1px solid #dfb3ad;border-radius:6px;background:#fff;color:#b5564f;cursor:pointer;font:inherit;font-size:11px;padding:6px 10px}
+.dash-loading{display:grid;gap:20px}
+.skeleton{border-radius:10px;background:linear-gradient(100deg,#eef1ee 40%,#f6f8f6 50%,#eef1ee 60%);background-size:200% 100%;animation:skeleton-wave 1.4s infinite linear;min-height:30px}
+.skeleton-heading{height:30px;width:40%}
+.skeleton-card{min-height:140px;border:1px solid #edf0ed}
+@keyframes skeleton-wave{to{background-position-x:-200%}}
+
+/* ---------- Responsive ---------- */
+@media (max-width:1100px){
+  .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stats-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .charts-grid{grid-template-columns:1fr}
+  .panels-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .panel-card--wide{grid-column:span 2}
+}
+@media (max-width:760px){
+  .kpi-grid{grid-template-columns:1fr}
+  .stats-strip{grid-template-columns:1fr}
+  .panels-grid{grid-template-columns:1fr}
+  .panel-card--wide{grid-column:span 1}
+  .dash-row{grid-template-columns:1.2fr 1fr .8fr}
+  .dash-row span:nth-child(2),.dash-row span:nth-child(3){display:none}
+  .dash-row--head span:nth-child(2),.dash-row--head span:nth-child(3){display:none}
+  .dash-row--payments{grid-template-columns:1fr 1.2fr 1fr}
+  .dash-row--payments span:nth-child(3){display:none}
+  .dash-row--payments.dash-row--head span:nth-child(3){display:none}
+  .due-item__due{display:none}
+  .donut-chart-wrap{justify-content:center}
+}

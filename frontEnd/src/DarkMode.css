@@ -1,0 +1,123 @@
+/* =========================================================
+   Mode sombre — surcharge complète du tableau de bord
+   La classe .dark-mode est posée sur .dashboard-shell
+   ========================================================= */
+
+/* ---------- Shell & sidebar ---------- */
+.dark-mode.dashboard-shell{background:#151a1f;color:#dde3ea}
+.dark-mode .dashboard-sidebar{background:#1a2028;border-right-color:#262e3a}
+.dark-mode .sidebar-label,.dark-mode .dashboard-kicker{color:#7f8994}
+.dark-mode .nav-item,.dark-mode .user-menu{color:#9aa4ae}
+.dark-mode .nav-item:hover,.dark-mode .user-menu:hover{color:#c3cbd5}
+.dark-mode .nav-item.active{background:rgba(233,121,77,.14);color:#f09a6b}
+.dark-mode .user-menu{border-top-color:#262e3a}
+.dark-mode .user-menu small{color:#7f8994}
+.dark-mode .avatar{background:#24362d;color:#8fd0ab}
+
+/* ---------- En-têtes de pages ---------- */
+.dark-mode h1{color:#e6eaf0}
+.dark-mode h2,.dark-mode h3{color:#e0e5ec}
+.dark-mode .dashboard-header h1 span{color:#f09a6b}
+.dark-mode .dashboard-subtitle,.dark-mode .clients-subtitle,.dark-mode .products-subtitle,.dark-mode .invoices-subtitle,.dark-mode .quotes-subtitle,.dark-mode .payments-subtitle,.dark-mode .settings-subtitle{color:#9aa4ae}
+.dark-mode .clients-heading p,.dark-mode .products-heading p,.dark-mode .invoices-heading p,.dark-mode .quotes-heading p{color:#8d97a3}
+.dark-mode .client-form-heading p,.dark-mode .clients-panel-heading p,.dark-mode .product-form-heading p,.dark-mode .products-panel-heading p,.dark-mode .invoice-form-heading p,.dark-mode .invoices-panel-heading p,.dark-mode .quote-form-heading p,.dark-mode .quotes-panel-heading p,.dark-mode .payment-form-heading p,.dark-mode .payments-panel-heading p,.dark-mode .payments-history-heading p,.dark-mode .settings-card-heading p,.dark-mode .chart-card__head p{color:#8d97a3}
+.dark-mode .close-button{color:#7f8994}
+
+/* ---------- Panneaux & cartes ---------- */
+.dark-mode .client-form,.dark-mode .clients-panel,.dark-mode .product-form,.dark-mode .products-panel,.dark-mode .invoice-form,.dark-mode .invoices-panel,.dark-mode .invoices-panel-tools,.dark-mode .quote-form,.dark-mode .quotes-panel,.dark-mode .payments-panel,.dark-mode .payments-history,.dark-mode .settings-card,.dark-mode .chart-card,.dark-mode .panel-card,.dark-mode .kpi-card,.dark-mode .stat-chip,.dark-mode .pay-kpi,.dark-mode .pay-chip{background:#1e2530;border-color:#2a323e}
+.dark-mode .invoice-items-section,.dark-mode .quote-items-section,.dark-mode .payment-form,.dark-mode .payment-summary>div,.dark-mode .settings-switch{background:#242c38;border-color:#2a323e}
+.dark-mode .pay-chip{color:#9aa4ae}
+.dark-mode .pay-chip strong{color:#e0e5ec}
+
+/* ---------- Boutons ---------- */
+.dark-mode .cancel-button,.dark-mode .refresh-button,.dark-mode .client-actions button,.dark-mode .product-actions button,.dark-mode .quote-actions button,.dark-mode .invoice-actions button,.dark-mode .pay-actions button,.dark-mode .more-button,.dark-mode .icon-button{background:#242c38;border-color:#333c49;color:#b9c2cc}
+.dark-mode .delete-button{color:#e08575}
+.dark-mode .add-item-button,.dark-mode .remove-item-button{border-color:#333c49;color:#9aa4ae}
+.dark-mode .pay-actions button:hover{background:#2a323e}
+.dark-mode .pay-actions button{background:#242c38;border-color:rgba(209,96,92,.4);color:#e08575}
+/* ---------- Champs de saisie ---------- */
+.dark-mode input,.dark-mode select,.dark-mode textarea{background:#202833;border-color:#2b3441;color:#dde3ea}
+.dark-mode input::placeholder,.dark-mode textarea::placeholder{color:#7f8994}
+.dark-mode .payment-invoice-picker select,.dark-mode .pay-filter input,.dark-mode .pay-filter select,.dark-mode .status-select{background:#202833;border-color:#2b3441;color:#dde3ea}
+.dark-mode .pay-filter label,.dark-mode .payment-form label,.dark-mode .invoice-form label,.dark-mode .quote-form label,.dark-mode .product-form label,.dark-mode .client-form label,.dark-mode .settings-form label,.dark-mode .settings-role-label,.dark-mode .payment-invoice-picker{color:#9aa4ae}
+
+/* ---------- Tableaux ---------- */
+.dark-mode .client-row,.dark-mode .product-row,.dark-mode .invoice-row,.dark-mode .quote-row,.dark-mode .payment-row,.dark-mode .table-row{border-top-color:#2a323e}
+.dark-mode .client-row-head,.dark-mode .product-row-head,.dark-mode .invoice-row-head,.dark-mode .quote-row-head,.dark-mode .payment-row-head,.dark-mode .table-head{color:#9aa4ae}
+.dark-mode .client-row>strong,.dark-mode .product-row>strong,.dark-mode .invoice-row>strong,.dark-mode .quote-row>strong,.dark-mode .payment-row>strong{color:#e0e5ec}
+.dark-mode .client-row>span,.dark-mode .product-row>span,.dark-mode .invoice-row>span,.dark-mode .quote-row>span,.dark-mode .payment-row>span,.dark-mode .table-row>span{color:#9aa4ae}
+.dark-mode .invoice-item-row,.dark-mode .quote-item-row{border-color:#2a323e}
+.dark-mode .invoice-item-head,.dark-mode .quote-item-head{color:#9aa4ae}
+.dark-mode .invoice-total-row,.dark-mode .quote-total-row{border-top-color:#2a323e;color:#9aa4ae}
+.dark-mode .invoice-total-grand,.dark-mode .quote-total-grand{color:#f09a6b}
+.dark-mode .invoice-notes-label,.dark-mode .quote-notes-label,.dark-mode .payment-notes-label{color:#8d97a3}
+.dark-mode .pay-amount{color:#e0e5ec!important}
+.dark-mode .pay-method-cell{color:#dde3ea}
+
+/* ---------- Vue d'ensemble (KPI, stats, graphiques) ---------- */
+.dark-mode .kpi-card__label,.dark-mode .stat-chip__label,.dark-mode .pay-kpi__label,.dark-mode .payment-summary span{color:#8d97a3}
+.dark-mode .kpi-card__value,.dark-mode .stat-chip strong,.dark-mode .pay-kpi strong{color:#e6eaf0}
+.dark-mode .kpi-card__value--danger{color:#e08575}
+.dark-mode .kpi-card__foot,.dark-mode .stat-chip small,.dark-mode .pay-kpi small{color:#9aa4ae}
+.dark-mode .kpi-card__sub{color:#7f8994}
+.dark-mode .kpi-icon--green{background:rgba(76,163,117,.16);color:#7cc39a}
+.dark-mode .kpi-icon--blue{background:rgba(91,142,209,.16);color:#8ab0e0}
+.dark-mode .kpi-icon--orange{background:rgba(233,121,77,.16);color:#f09a6b}
+.dark-mode .kpi-icon--red{background:rgba(209,96,92,.16);color:#e08575}
+.dark-mode .payment-summary strong{color:#e0e5ec}
+.dark-mode .payment-balance strong{color:#e28d6a}
+.dark-mode .payment-balance.is-settled strong{color:#7cc39a}
+.dark-mode .legend-item{color:#9aa4ae}
+.dark-mode .chart-axis-label,.dark-mode .chart-x-label{fill:#8d97a3}
+.dark-mode .chart-gridline{stroke:#2a323e}
+.dark-mode .donut-track{stroke:#2a323e}
+.dark-mode .donut-center-value{fill:#e6eaf0}
+.dark-mode .donut-center-label{fill:#8d97a3}
+.dark-mode .dlegend-row{color:#9aa4ae}
+.dark-mode .dlegend-row b{color:#e0e5ec}
+.dark-mode .dlegend-row em{color:#7f8994}
+.dark-mode .donut-empty{border-color:#333c49;color:#8d97a3}
+.dark-mode .rank-pos{background:#2a323e;color:#b9a99e}
+.dark-mode .rank-top strong{color:#dde3ea}
+.dark-mode .rank-top b{color:#aab4bf}
+.dark-mode .rank-main small{color:#8d97a3}
+.dark-mode .dash-row>span{color:#aab4bf}
+.dark-mode .dash-row>strong{color:#e0e5ec}
+.dark-mode .due-heading{color:#8d97a3}
+.dark-mode .due-item__main strong{color:#e0e5ec}
+.dark-mode .due-item__main small,.dark-mode .due-item__due,.dark-mode .due-amount{color:#9aa4ae}
+.dark-mode .due-item--late .due-item__due,.dark-mode .due-item--late .due-amount{color:#e08575}
+.dark-mode .feed-item strong{color:#dde3ea}
+.dark-mode .feed-item p span{color:#9aa4ae}
+.dark-mode .feed-item p small{color:#7f8994}
+.dark-mode .feed-item>b{color:#7cc39a}
+.dark-mode .feed-item--quote>b{color:#c3cbd5}
+.dark-mode .rank-item{border-color:#2a323e}
+.dark-mode .rank-track{background:#2a323e}
+
+/* ---------- États vides / erreurs / chargement ---------- */
+.dark-mode .dash-empty{background:#1e2530;border-color:#333c49}
+.dark-mode .dash-empty-text{color:#8d97a3}
+.dark-mode .dash-error{background:rgba(209,96,92,.12);border-color:rgba(209,96,92,.35);color:#e08575}
+.dark-mode .skeleton{background:linear-gradient(100deg,#232b36 40%,#2b3441 50%,#232b36 60%);background-size:200% 100%}
+.dark-mode .empty-state{color:#8d97a3}
+
+/* ---------- Messages ---------- */
+.dark-mode .clients-message,.dark-mode .products-message,.dark-mode .invoices-message,.dark-mode .quotes-message{background:rgba(233,121,77,.14);border:1px solid rgba(233,121,77,.3);color:#f09a6b}
+.dark-mode .payments-message{background:rgba(76,163,117,.14);border-color:rgba(76,163,117,.35);color:#7cc39a}
+.dark-mode .settings-message--success{background:rgba(76,163,117,.14);border:1px solid rgba(76,163,117,.35);color:#7cc39a}
+.dark-mode .settings-message--error{background:rgba(209,96,92,.12);border:1px solid rgba(209,96,92,.35);color:#e08575}
+.dark-mode .invoice-paid-message{background:rgba(76,163,117,.16);border-color:rgba(76,163,117,.4);color:#6fbf91}
+.dark-mode .invoice-partial-message{background:rgba(224,154,63,.16);border-color:rgba(224,154,63,.4);color:#e8b25e}
+
+/* ---------- Paramètres ---------- */
+.dark-mode .settings-nav-item{color:#9aa4ae}
+.dark-mode .settings-nav-item:hover{border-color:#333c49;color:#c3cbd5}
+.dark-mode .settings-nav-item.active{background:rgba(233,121,77,.14);border-color:rgba(233,121,77,.3);color:#f09a6b}
+.dark-mode .settings-role-badge{background:rgba(76,163,117,.18);color:#7cc39a}
+.dark-mode .settings-document-preview{color:#9aa4ae}
+.dark-mode .settings-document-preview code{background:#242c38;border-color:#333c49;color:#dde3ea}
+.dark-mode .settings-switch-track{background:#3a4453}
+.dark-mode .settings-switch input:checked + .settings-switch-track{background:#4ca375}
+.dark-mode .settings-switch-text strong{color:#e0e5ec}
+.dark-mode .settings-switch-text small,.dark-mode .settings-hint{color:#9aa4ae}

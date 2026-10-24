@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use Illuminate\Http\JsonResponse;
@@ -167,11 +168,19 @@ class InvoiceController extends Controller
 
     private function generateInvoiceNumber(int $companyId): string
     {
+        // Le préfixe provient des paramètres de l'entreprise (Documents), sinon FAC-.
+        $company = Company::where('id', $companyId)->first();
+        $prefix = trim($company?->invoice_prefix ?? '');
+
+        if ($prefix === '') {
+            $prefix = 'FAC-';
+        }
+
         // La colonne invoice_number est UNIQUE globalement en base : on ne peut
         // pas compter par entreprise (deux sociétés produiraient FAC-2026-001).
         // On dérive le prochain numéro du dernier numéro réellement utilisé.
         $year = now()->format('Y');
-        $pattern = sprintf('FAC-%s-%%', $year);
+        $pattern = sprintf('%s%s-%%', $prefix, $year);
         $last = Invoice::where('invoice_number', 'like', $pattern)
             ->latest('invoice_number')
             ->value('invoice_number');
@@ -182,7 +191,7 @@ class InvoiceController extends Controller
             $sequence = (int) \Illuminate\Support\Str::afterLast($last, '-') + 1;
         }
 
-        return sprintf('FAC-%s-%03d', $year, $sequence);
+        return sprintf('%s%s-%03d', $prefix, $year, $sequence);
     }
 
     private function ensureBelongsToCompany(Request $request, Invoice $invoice): void

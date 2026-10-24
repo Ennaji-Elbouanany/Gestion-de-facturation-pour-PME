@@ -18,6 +18,16 @@ class Company extends Model
         'city',
         'country',
         'tax_number',
+        'ice',
+        'payment_terms_days',
+        'default_tax_rate',
+        'currency',
+        'invoice_prefix',
+        'invoice_footer',
+        'notify_on_new_invoice',
+        'notify_on_payment',
+        'notify_on_quote',
+        'notify_on_overdue',
         'logo',
     ];
 

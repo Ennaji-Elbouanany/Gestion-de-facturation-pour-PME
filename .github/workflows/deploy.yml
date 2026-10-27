@@ -45,7 +45,7 @@ jobs:
       - name: Build frontend for Vercel
         working-directory: frontEnd
         env:
-          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://facturation_project.onrender.com' }}
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://gestion-de-facturation-pour-pme-3.onrender.com' }}
         run: |
           npm ci
           npm run lint

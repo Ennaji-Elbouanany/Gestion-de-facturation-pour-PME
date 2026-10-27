@@ -19,7 +19,7 @@ class ResetPasswordNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $url = rtrim((string) env('FRONTEND_URL', 'http://127.0.0.1:5173'), '/')
+        $url = rtrim((string) config('app.frontend_url'), '/')
             . '/reset-password?token='
             . urlencode($this->token)
             . '&email='

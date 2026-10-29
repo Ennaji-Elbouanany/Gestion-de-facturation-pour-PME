@@ -20,7 +20,7 @@ const navigation = [
 
 
 
-function Dashboard({ onLogout }) {
+function Dashboard({ onLogout, onGoToLanding }) {
   const [activeItem, setActiveItem] = useState('Vue d’ensemble')
   const [user, setUser] = useState(null)
   const [isDark, setIsDark] = useState(() => localStorage.getItem('dark_mode') === '1')
@@ -53,7 +53,7 @@ function Dashboard({ onLogout }) {
   return (
     <main className={`dashboard-shell${isDark ? ' dark-mode' : ''}`}>
       <aside className="dashboard-sidebar">
-        <div className="brand-lockup"><span className="brand-mark">F</span><span>Factura</span></div>
+        <button className="brand-lockup brand-link" type="button" onClick={onGoToLanding} aria-label="Retourner à l'accueil de Factura"><span className="brand-mark">F</span><span>Factura</span></button>
         <p className="sidebar-label">Espace de travail</p>
         <nav className="dashboard-nav" aria-label="Navigation principale">
           {navigation.map((item) => <button className={activeItem === item.label ? 'nav-item active' : 'nav-item'} key={item.label} onClick={() => setActiveItem(item.label)} type="button"><span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}</button>)}

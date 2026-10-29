@@ -118,6 +118,6 @@
 .dark-mode .settings-document-preview{color:#9aa4ae}
 .dark-mode .settings-document-preview code{background:#242c38;border-color:#333c49;color:#dde3ea}
 .dark-mode .settings-switch-track{background:#3a4453}
-.dark-mode .settings-switch input:checked + .settings-switch-track{background:#4ca375}
+.dark-mode .settings-switch input:checked + .settings-switch-track{background:var(--color-success)}
 .dark-mode .settings-switch-text strong{color:#e0e5ec}
 .dark-mode .settings-switch-text small,.dark-mode .settings-hint{color:#9aa4ae}

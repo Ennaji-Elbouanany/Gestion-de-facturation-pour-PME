@@ -3,7 +3,7 @@ import './Login.css'
 
 const LOGIN_URL = `${import.meta.env.VITE_API_URL}/api/login`
 
-function Login({ onLogin, onRegisterClick, onForgotPasswordClick }) {
+function Login({ onLogin, onRegisterClick, onForgotPasswordClick, onBackToLanding }) {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -63,6 +63,8 @@ function Login({ onLogin, onRegisterClick, onForgotPasswordClick }) {
   return (
     <main className="login-page">
       <section className="login-panel" aria-labelledby="login-title">
+        <button className="auth-brand" type="button" onClick={onBackToLanding} aria-label="Retourner à l'accueil de Factura"><span className="auth-brand-mark">F</span><span>Factura</span></button>
+        <button className="auth-home-link" type="button" onClick={onBackToLanding}>← Retour à l’accueil</button>
         <p className="login-eyebrow">Bon retour</p>
 
         <h1 id="login-title">Se connecter</h1>

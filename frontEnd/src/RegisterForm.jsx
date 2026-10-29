@@ -4,7 +4,7 @@ import './RegisterForm.css'
 
 const REGISTER_URL = `${import.meta.env.VITE_API_URL}/api/register`
 
-function RegisterForm({ onLoginClick }) {
+function RegisterForm({ onLoginClick, onBackToLanding }) {
   const [formData, setFormData] = useState({
     name: '',
     company_name: '',
@@ -100,6 +100,8 @@ function RegisterForm({ onLoginClick }) {
         className="register-panel"
         aria-labelledby="register-title"
       >
+        <button className="auth-brand" type="button" onClick={onBackToLanding} aria-label="Retourner à l'accueil de Factura"><span className="auth-brand-mark">F</span><span>Factura</span></button>
+        <button className="auth-home-link" type="button" onClick={onBackToLanding}>← Retour à l’accueil</button>
         <p className="register-eyebrow">Bienvenue</p>
 
         <h1 id="register-title">Créer un compte</h1>

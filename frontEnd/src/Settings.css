@@ -1,44 +1,44 @@
 .settings-page{width:100%}
 .settings-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:30px}
-.settings-heading h1{margin:10px 0 5px;color:#1c2c26;font-family:Georgia,serif;font-size:34px;line-height:1.1;letter-spacing:-.03em}
-.settings-subtitle{color:#86928b;font-size:13px}
+.settings-heading h1{margin:10px 0 5px;color:var(--color-text);font-family:Georgia,serif;font-size:34px;line-height:1.1;letter-spacing:-.03em}
+.settings-subtitle{color:var(--color-text-muted);font-size:13px}
 .settings-message{margin:0 0 16px;padding:12px 14px;border-radius:6px;font-size:12px}
 .settings-message--success{background:#e8f5ec;color:#2d7a4f}
 .settings-message--error{background:#fdf3f1;color:#b5564f}
 .settings-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:24px;align-items:start}
 .settings-nav{display:grid;gap:6px;align-content:start}
-.settings-nav-item{border:1px solid transparent;background:transparent;color:#687770;font:inherit;text-align:left;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:8px;font-size:13px}
-.settings-nav-item:hover{background:#f4f6f3;border-color:#e4e8e4}
-.settings-nav-item.active{background:#fff3ed;color:#c85f39;border-color:#f5d9c8;font-weight:700}
+.settings-nav-item{border:1px solid transparent;background:transparent;color:var(--color-text-muted);font:inherit;text-align:left;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:8px;font-size:13px}
+.settings-nav-item:hover{background:#f4f6f3;border-color:var(--color-border)}
+.settings-nav-item.active{background:var(--color-primary-soft);color:var(--color-primary-dark);border-color:var(--color-border);font-weight:700}
 .settings-nav-icon{width:22px;text-align:center;font-size:16px}
 .settings-content{min-width:0;display:grid;gap:20px}
-.settings-card{border:1px solid #e3e8e3;border-radius:8px;background:#fff;padding:23px 22px}
+.settings-card{border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface);padding:23px 22px}
 .settings-card-heading{margin-bottom:18px}
-.settings-card-heading h2{margin:0 0 5px;color:#273831;font-family:Georgia,serif;font-size:18px}
-.settings-card-heading p{margin:0;color:#a1aaa5;font-size:11px}
+.settings-card-heading h2{margin:0 0 5px;color:var(--color-text);font-family:Georgia,serif;font-size:18px}
+.settings-card-heading p{margin:0;color:var(--color-text-muted);font-size:11px}
 .settings-form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 .settings-form label{display:grid;gap:7px;color:#65736c;font-size:11px;font-weight:700}
-.settings-form input,.settings-form select,.settings-form textarea{min-height:42px;padding:0 12px;border:1px solid #dce3dd;border-radius:5px;background:#fcfdfc;color:#283830;font:inherit;font-size:12px;box-sizing:border-box}
+.settings-form input,.settings-form select,.settings-form textarea{min-height:42px;padding:0 12px;border:1px solid var(--color-border);border-radius:5px;background:#fcfdfc;color:var(--color-text);font:inherit;font-size:12px;box-sizing:border-box}
 .settings-form textarea{min-height:96px;padding:10px 12px;resize:vertical}
 .settings-input-textarea{min-height:64px;padding:8px 12px;resize:vertical}
-.settings-form input:focus,.settings-form select:focus,.settings-form textarea:focus{outline:2px solid #e9794d;outline-offset:1px;border-color:#e9794d}
+.settings-form input:focus,.settings-form select:focus,.settings-form textarea:focus{outline:2px solid var(--color-primary);outline-offset:1px;border-color:var(--color-primary)}
 .settings-field--wide{grid-column:1/-1}
 .settings-form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
 .settings-role-field{display:grid;gap:7px;color:#65736c;font-size:11px;font-weight:700;align-content:start}
 .settings-role-label{display:block;color:#65736c;font-size:11px;font-weight:700}
-.settings-role-badge{justify-self:start;display:inline-block;padding:6px 14px;border-radius:999px;background:#eef3f0;color:#37725a;font-size:11px;font-weight:700}
+.settings-role-badge{justify-self:start;display:inline-block;padding:6px 14px;border-radius:999px;background:#eef3f0;color:var(--color-secondary);font-size:11px;font-weight:700}
 .settings-document-preview{display:flex;align-items:center;gap:10px;color:#8b9891;font-size:11px}
-.settings-document-preview code{background:#f4f6f3;border:1px solid #e4e8e4;border-radius:5px;padding:5px 10px;color:#273831;font-size:12px}
+.settings-document-preview code{background:#f4f6f3;border:1px solid var(--color-border);border-radius:5px;padding:5px 10px;color:var(--color-text);font-size:12px}
 .settings-notifications{display:grid;gap:12px}
 .settings-switch{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid #eef1ee;border-radius:8px;background:#fcfdfc;cursor:pointer}
 .settings-switch input{display:none}
 .settings-switch-track{width:40px;height:22px;border-radius:999px;background:#dfe5df;position:relative;transition:background .15s ease;flex:0 0 40px}
-.settings-switch-track::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s ease}
-.settings-switch input:checked + .settings-switch-track{background:#4ca375}
+.settings-switch-track::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--color-surface);transition:transform .15s ease}
+.settings-switch input:checked + .settings-switch-track{background:var(--color-success)}
 .settings-switch input:checked + .settings-switch-track::after{transform:translateX(18px)}
 .settings-switch-text{display:grid}
-.settings-switch-text strong{color:#273831;font-size:13px}
+.settings-switch-text strong{color:var(--color-text);font-size:13px}
 .settings-switch-text small{color:#8b9891;font-size:11px}
-.settings-hint{margin:4px 0 0;color:#9aa49e;font-size:11px}
+.settings-hint{margin:4px 0 0;color:var(--color-text-muted);font-size:11px}
 @media (max-width:900px){.settings-layout{grid-template-columns:1fr}.settings-nav{display:flex;flex-wrap:wrap;gap:6px}}
 @media (max-width:700px){.settings-form-grid{grid-template-columns:1fr}}

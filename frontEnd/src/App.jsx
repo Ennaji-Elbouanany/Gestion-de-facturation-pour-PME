@@ -1,37 +1,60 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import RegisterForm from './RegisterForm'
 import Login from './Login'
 import ForgotPassword from './ForgotPassword'
 import ResetPassword from './ResetPassword'
 import Dashboard from './Dashboard'
+import Landing from './Landing'
 import './App.css'
 
 function App() {
   const searchParams = new URLSearchParams(window.location.search)
   const isResetPasswordPage = window.location.pathname.replace(/\/$/, '') === '/reset-password'
     || searchParams.has('token')
-  const initialPage = isResetPasswordPage
-    ? 'reset-password'
-    : localStorage.getItem('auth_token')
-      ? 'dashboard'
-      : localStorage.getItem('auth_page') || 'register'
-  const [page, setPage] = useState(
-    () => initialPage
-  )
+  const pageForPath = (path) => {
+    if (path === '/') return 'landing'
+    if (path === '/login') return 'login'
+    if (path === '/register') return 'register'
+    if (path === '/dashboard') return localStorage.getItem('auth_token') ? 'dashboard' : 'login'
+    return localStorage.getItem('auth_page') || 'register'
+  }
+  const initialPage = isResetPasswordPage ? 'reset-password' : pageForPath(window.location.pathname)
+  const [page, setPage] = useState(() => initialPage)
+
+  useEffect(() => {
+    function handlePopState() {
+      setPage(pageForPath(window.location.pathname))
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  function navigate(nextPage, path, { replace = false } = {}) {
+    if (window.location.pathname !== path) {
+      window.history[replace ? 'replaceState' : 'pushState']({}, '', path)
+    }
+    setPage(nextPage)
+  }
 
   function showLogin() {
     localStorage.setItem('auth_page', 'login')
-    setPage('login')
+    navigate('login', '/login')
   }
 
   function showRegister() {
     localStorage.setItem('auth_page', 'register')
-    setPage('register')
+    navigate('register', '/register')
   }
 
   function showDashboard() {
     localStorage.setItem('auth_page', 'dashboard')
-    setPage('dashboard')
+    navigate('dashboard', '/dashboard')
+  }
+
+  function showLanding() {
+    localStorage.setItem('auth_page', 'landing')
+    navigate('landing', '/')
   }
 
   function handleLogout() {
@@ -41,24 +64,27 @@ function App() {
 
   function showForgotPassword() {
     localStorage.setItem('auth_page', 'forgot-password')
-    setPage('forgot-password')
+    navigate('forgot-password', '/forgot-password')
   }
 
   return (
-    page === 'dashboard' ? (
-      <Dashboard onLogout={handleLogout} />
+    page === 'landing' ? (
+      <Landing onLogin={showLogin} onRegister={showRegister} onDashboard={showDashboard} isAuthenticated={Boolean(localStorage.getItem('auth_token'))} />
+    ) : page === 'dashboard' ? (
+      <Dashboard onLogout={handleLogout} onGoToLanding={showLanding} />
     ) : page === 'login' ? (
       <Login
         onLogin={showDashboard}
         onRegisterClick={showRegister}
         onForgotPasswordClick={showForgotPassword}
+        onBackToLanding={showLanding}
       />
     ) : page === 'forgot-password' ? (
       <ForgotPassword onLoginClick={showLogin} />
     ) : page === 'reset-password' ? (
       <ResetPassword onLoginClick={showLogin} />
     ) : (
-      <RegisterForm onLoginClick={showLogin} />
+      <RegisterForm onLoginClick={showLogin} onBackToLanding={showLanding} />
     )
   )
 }

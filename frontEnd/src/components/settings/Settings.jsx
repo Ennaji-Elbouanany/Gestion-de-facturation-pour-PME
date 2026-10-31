@@ -276,8 +276,8 @@ function Settings() {
         <form className="settings-form" onSubmit={saveSecurity}>
           <div className="settings-form-grid">
             <label className="settings-field--wide">Mot de passe actuel *<input name="current_password" type="password" value={securityForm.current_password} onChange={handleChange(setSecurityForm)} required autoComplete="current-password" /></label>
-            <label>Nouveau mot de passe *<input name="password" type="password" value={securityForm.password} onChange={handleChange(setSecurityForm)} required minLength={8} autoComplete="new-password" /></label>
-            <label>Confirmation du nouveau mot de passe *<input name="password_confirmation" type="password" value={securityForm.password_confirmation} onChange={handleChange(setSecurityForm)} required minLength={8} autoComplete="new-password" /></label>
+            <label>Nouveau mot de passe *<input name="password" type="password" value={securityForm.password} onChange={handleChange(setSecurityForm)} required minLength={12} autoComplete="new-password" /></label>
+            <label>Confirmation du nouveau mot de passe *<input name="password_confirmation" type="password" value={securityForm.password_confirmation} onChange={handleChange(setSecurityForm)} required minLength={12} autoComplete="new-password" /></label>
           </div>
           <div className="settings-form-actions"><button className="primary-button" type="submit" disabled={isSaving}>{isSaving ? 'Enregistrement...' : 'Mettre à jour le mot de passe'}</button></div>
         </form>

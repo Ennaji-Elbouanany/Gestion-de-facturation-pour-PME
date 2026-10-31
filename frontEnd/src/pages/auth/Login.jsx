@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import './Login.css'
 import { authRequest } from '../../services/auth'
+import PasswordField from './PasswordField'
 
 function Login({ onLogin, onRegisterClick, onForgotPasswordClick, onBackToLanding }) {
   const [formData, setFormData] = useState({
@@ -12,10 +13,11 @@ function Login({ onLogin, onRegisterClick, onForgotPasswordClick, onBackToLandin
 
   function handleChange(event) {
     const { name, value } = event.target
+    const nextValue = name === 'email' ? value.trim().toLowerCase() : value
 
     setFormData((currentData) => ({
       ...currentData,
-      [name]: value,
+      [name]: nextValue,
     }))
     setMessage('')
   }
@@ -31,11 +33,10 @@ function Login({ onLogin, onRegisterClick, onForgotPasswordClick, onBackToLandin
         body: JSON.stringify(formData),
       }, 'Adresse e-mail ou mot de passe incorrect.')
 
-      if (typeof result.token !== 'string' || !result.token) {
+      if (!result.user) {
         throw new Error('Adresse e-mail ou mot de passe incorrect.')
       }
 
-      localStorage.setItem('auth_token', result.token)
       setFormData({ email: '', password: '' })
       onLogin?.()
     } catch (error) {
@@ -72,17 +73,7 @@ function Login({ onLogin, onRegisterClick, onForgotPasswordClick, onBackToLandin
             required
           />
 
-          <label htmlFor="login-password">Mot de passe</label>
-
-          <input
-            id="login-password"
-            name="password"
-            type="password"
-            value={formData.password}
-            onChange={handleChange}
-            autoComplete="current-password"
-            required
-          />
+          <PasswordField id="login-password" name="password" label="Mot de passe" value={formData.password} onChange={handleChange} autoComplete="current-password" />
 
           <button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Connexion en cours...' : 'Se connecter'}

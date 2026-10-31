@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import './Login.css'
-
-const FORGOT_PASSWORD_URL = `${import.meta.env.VITE_API_URL}/api/forgot-password`
+import { authRequest } from '../../services/auth'
 
 function ForgotPassword({ onLoginClick }) {
   const [email, setEmail] = useState('')
@@ -14,32 +13,10 @@ function ForgotPassword({ onLoginClick }) {
     setMessage('')
 
     try {
-      const response = await fetch(FORGOT_PASSWORD_URL, {
+      const result = await authRequest('/api/forgot-password', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
         body: JSON.stringify({ email }),
-      })
-      const responseText = await response.text()
-      let result = {}
-
-      if (responseText.trim()) {
-        try {
-          result = JSON.parse(responseText)
-        } catch {
-          throw new Error(`Le serveur a renvoyé une réponse invalide (HTTP ${response.status}).`)
-        }
-      }
-
-      if (!response.ok) {
-        const validationMessage = result.errors
-          ? Object.values(result.errors).flat().join(' ')
-          : result.message
-        throw new Error(validationMessage || 'Impossible d\'envoyer le lien.')
-      }
-
+      }, 'Impossible d’envoyer le lien.')
       setMessage(result.message || 'Le lien de réinitialisation a été envoyé par e-mail.')
     } catch (error) {
       setMessage(error.message || 'Une erreur est survenue. Réessayez.')

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import './Login.css'
-
-const RESET_PASSWORD_URL = `${import.meta.env.VITE_API_URL}/api/reset-password`
+import PasswordField from './PasswordField'
+import { authRequest } from '../../services/auth'
 
 function ResetPassword({ onLoginClick }) {
   const searchParams = new URLSearchParams(window.location.search)
@@ -24,27 +24,15 @@ function ResetPassword({ onLoginClick }) {
     setMessage('')
 
     try {
-      const response = await fetch(RESET_PASSWORD_URL, {
+      const result = await authRequest('/api/reset-password', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
         body: JSON.stringify({
           token,
           email,
           password,
           password_confirmation: passwordConfirmation,
         }),
-      })
-      const result = await response.json()
-
-      if (!response.ok) {
-        const validationMessage = result.errors
-          ? Object.values(result.errors).flat().join(' ')
-          : result.message
-        throw new Error(validationMessage || 'Impossible de réinitialiser le mot de passe.')
-      }
+      }, 'Impossible de réinitialiser le mot de passe.')
 
       setMessage(result.message)
       setPassword('')
@@ -71,32 +59,13 @@ function ResetPassword({ onLoginClick }) {
             id="reset-email"
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => setEmail(event.target.value.trim().toLowerCase())}
             autoComplete="email"
             required
           />
 
-          <label htmlFor="reset-password">Nouveau mot de passe</label>
-          <input
-            id="reset-password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete="new-password"
-            minLength={8}
-            required
-          />
-
-          <label htmlFor="reset-password-confirmation">Confirmer le mot de passe</label>
-          <input
-            id="reset-password-confirmation"
-            type="password"
-            value={passwordConfirmation}
-            onChange={(event) => setPasswordConfirmation(event.target.value)}
-            autoComplete="new-password"
-            minLength={8}
-            required
-          />
+          <PasswordField id="reset-password" label="Nouveau mot de passe" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" showStrength />
+          <PasswordField id="reset-password-confirmation" label="Confirmer le mot de passe" value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} autoComplete="new-password" />
 
           <button type="submit" disabled={isSubmitting || !token}>
             {isSubmitting ? 'Modification en cours...' : 'Modifier le mot de passe'}

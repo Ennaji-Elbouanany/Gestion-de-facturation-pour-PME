@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class SettingsController extends Controller
 {
@@ -22,6 +23,7 @@ class SettingsController extends Controller
     public function updateProfile(Request $request): JsonResponse
     {
         $user = $request->user();
+        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -133,7 +135,7 @@ class SettingsController extends Controller
 
         $data = $request->validate([
             'current_password' => ['required', 'string'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', PasswordRule::min(12)->mixedCase()->numbers()->symbols(), 'confirmed'],
         ]);
 
         if (!Hash::check($data['current_password'], $user->password)) {

@@ -22,9 +22,10 @@ class SettingsTest extends TestCase
 
     public function test_user_can_load_settings(): void
     {
-        $token = $this->registerUser()['token'];
+        $account = $this->registerUser();
+        $user = User::findOrFail($account['user']['id']);
 
-        $response = $this->withToken($token)->get('/api/settings');
+        $response = $this->actingAs($user)->get('/api/settings');
 
         $response->assertSuccessful();
         $response->assertJsonPath('user.name', 'Dupont');
@@ -39,9 +40,10 @@ class SettingsTest extends TestCase
 
     public function test_user_can_update_company_settings(): void
     {
-        $token = $this->registerUser()['token'];
+        $account = $this->registerUser();
+        $user = User::findOrFail($account['user']['id']);
 
-        $response = $this->withToken($token)->patchJson('/api/settings/company', [
+        $response = $this->actingAs($user)->patchJson('/api/settings/company', [
             'name' => 'Nouvelle PME',
             'ice' => '0012345678900',
             'tax_number' => '4567890',
@@ -59,9 +61,10 @@ class SettingsTest extends TestCase
 
     public function test_user_can_update_billing_and_documents(): void
     {
-        $token = $this->registerUser()['token'];
+        $account = $this->registerUser();
+        $user = User::findOrFail($account['user']['id']);
 
-        $billing = $this->withToken($token)->patchJson('/api/settings/billing', [
+        $billing = $this->actingAs($user)->patchJson('/api/settings/billing', [
             'payment_terms_days' => 45,
             'default_tax_rate' => 20,
             'currency' => 'EUR',
@@ -71,7 +74,7 @@ class SettingsTest extends TestCase
         $billing->assertJsonPath('company.payment_terms_days', 45);
         $billing->assertJsonPath('company.currency', 'EUR');
 
-        $documents = $this->withToken($token)->patchJson('/api/settings/documents', [
+        $documents = $this->actingAs($user)->patchJson('/api/settings/documents', [
             'invoice_prefix' => 'DEV-',
             'invoice_footer' => 'Merci de votre confiance.',
         ]);
@@ -83,9 +86,10 @@ class SettingsTest extends TestCase
 
     public function test_user_can_update_notifications(): void
     {
-        $token = $this->registerUser()['token'];
+        $account = $this->registerUser();
+        $user = User::findOrFail($account['user']['id']);
 
-        $response = $this->withToken($token)->patchJson('/api/settings/notifications', [
+        $response = $this->actingAs($user)->patchJson('/api/settings/notifications', [
             'notify_on_new_invoice' => false,
             'notify_on_payment' => true,
         ]);
@@ -100,9 +104,10 @@ class SettingsTest extends TestCase
 
     public function test_user_can_update_profile(): void
     {
-        $token = $this->registerUser()['token'];
+        $account = $this->registerUser();
+        $user = User::findOrFail($account['user']['id']);
 
-        $response = $this->withToken($token)->patchJson('/api/settings/profile', [
+        $response = $this->actingAs($user)->patchJson('/api/settings/profile', [
             'name' => 'Nouveau Nom',
             'email' => 'nouveau@example.com',
         ]);
@@ -114,28 +119,30 @@ class SettingsTest extends TestCase
 
     public function test_user_can_change_password(): void
     {
-        $token = $this->registerUser()['token'];
+        $account = $this->registerUser();
+        $user = User::findOrFail($account['user']['id']);
 
-        $response = $this->withToken($token)->patchJson('/api/settings/security', [
-            'current_password' => 'secret1234',
-            'password' => 'nouveau-secret',
-            'password_confirmation' => 'nouveau-secret',
+        $response = $this->actingAs($user)->patchJson('/api/settings/security', [
+            'current_password' => 'Secret1234! PME',
+            'password' => 'Nouveau1234! Mot',
+            'password_confirmation' => 'Nouveau1234! Mot',
         ]);
 
         $response->assertSuccessful();
 
         $user = User::where('email', 'dupont@example.com')->first();
-        $this->assertTrue(Hash::check('nouveau-secret', $user->password));
+        $this->assertTrue(Hash::check('Nouveau1234! Mot', $user->password));
     }
 
     public function test_change_password_rejects_wrong_current_password(): void
     {
-        $token = $this->registerUser()['token'];
+        $account = $this->registerUser();
+        $user = User::findOrFail($account['user']['id']);
 
-        $response = $this->withToken($token)->patchJson('/api/settings/security', [
+        $response = $this->actingAs($user)->patchJson('/api/settings/security', [
             'current_password' => 'mauvais-mot-de-passe',
-            'password' => 'nouveau-secret',
-            'password_confirmation' => 'nouveau-secret',
+            'password' => 'Nouveau1234! Mot',
+            'password_confirmation' => 'Nouveau1234! Mot',
         ]);
 
         $response->assertStatus(422);
@@ -147,8 +154,8 @@ class SettingsTest extends TestCase
             'name' => 'Dupont',
             'email' => 'dupont@example.com',
             'company_name' => 'Ma PME',
-            'password' => 'secret1234',
-            'password_confirmation' => 'secret1234',
+            'password' => 'Secret1234! PME',
+            'password_confirmation' => 'Secret1234! PME',
             'role' => 'admin',
         ]);
 

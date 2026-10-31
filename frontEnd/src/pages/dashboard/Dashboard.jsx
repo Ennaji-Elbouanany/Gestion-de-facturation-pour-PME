@@ -8,6 +8,7 @@ import './Dashboard.css'
 import Overview from './Overview'
 import Settings from '../../components/settings/Settings'
 import './DarkMode.css'
+import { apiRequest } from '../../services/api'
 
 const navigation = [
   { label: 'Vue d’ensemble', icon: '⌂' },
@@ -26,16 +27,8 @@ function Dashboard({ initialSection = 'Vue d’ensemble', onNavigate, onLogout, 
   const [isDark, setIsDark] = useState(() => localStorage.getItem('dark_mode') === '1')
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token')
-    if (!token) return
-
-    fetch(`${import.meta.env.VITE_API_URL}/api/user`, {
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((response) => (response.ok ? response.json() : null))
+    apiRequest('/api/user')
+      .then((result) => result)
       .then((result) => { result && setUser(result) })
       .catch((error) => console.error('Impossible de récupérer le profil utilisateur.', error))
   }, [])

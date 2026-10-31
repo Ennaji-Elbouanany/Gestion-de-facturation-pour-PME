@@ -6,6 +6,7 @@ import ResetPassword from '../pages/auth/ResetPassword'
 import Dashboard from '../pages/dashboard/Dashboard'
 import Landing from '../pages/auth/Landing'
 import '../styles/App.css'
+import { authRequest } from '../services/auth'
 
 const protectedPaths = new Set(['/dashboard', '/payments', '/invoices', '/clients', '/products', '/quotes', '/settings'])
 
@@ -15,7 +16,7 @@ function pageForPath(path) {
   if (normalizedPath === '/') return 'landing'
   if (normalizedPath === '/login') return 'login'
   if (normalizedPath === '/register') return 'register'
-  if (protectedPaths.has(normalizedPath)) return localStorage.getItem('auth_token') ? 'dashboard' : 'login'
+  if (protectedPaths.has(normalizedPath)) return 'auth-check'
   return localStorage.getItem('auth_page') || 'register'
 }
 
@@ -38,6 +39,27 @@ function App() {
   const initialPage = isResetPasswordPage ? 'reset-password' : pageForPath(window.location.pathname)
   const [page, setPage] = useState(() => initialPage)
   const [dashboardPath, setDashboardPath] = useState(() => window.location.pathname)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
+    authRequest('/api/user', undefined, 'Unauthenticated.')
+      .then(() => setIsAuthenticated(true))
+      .catch(() => setIsAuthenticated(false))
+  }, [])
+
+  useEffect(() => {
+    if (initialPage !== 'auth-check') return undefined
+
+    authRequest('/api/user', undefined, 'login')
+      .then(() => {
+        setIsAuthenticated(true)
+        setPage('dashboard')
+      })
+      .catch(() => {
+        setIsAuthenticated(false)
+        setPage('login')
+      })
+  }, [initialPage])
 
   useEffect(() => {
     function handlePopState() {
@@ -67,6 +89,7 @@ function App() {
   }
 
   function showDashboard() {
+    setIsAuthenticated(true)
     localStorage.setItem('auth_page', 'dashboard')
     navigate('dashboard', '/dashboard')
   }
@@ -94,8 +117,12 @@ function App() {
   }
 
   function handleLogout() {
-    localStorage.removeItem('auth_token')
-    showLogin()
+    authRequest('/api/logout', { method: 'POST' }, 'Déconnexion impossible.')
+      .catch(() => undefined)
+      .finally(() => {
+        setIsAuthenticated(false)
+        showLogin()
+      })
   }
 
   function showForgotPassword() {
@@ -105,7 +132,9 @@ function App() {
 
   return (
     page === 'landing' ? (
-      <Landing onLogin={showLogin} onRegister={showRegister} onDashboard={showDashboard} isAuthenticated={Boolean(localStorage.getItem('auth_token'))} />
+      <Landing onLogin={showLogin} onRegister={showRegister} onDashboard={showDashboard} isAuthenticated={isAuthenticated} />
+    ) : page === 'auth-check' ? (
+      <main aria-label="Chargement"><p>Chargement...</p></main>
     ) : page === 'dashboard' ? (
       <Dashboard
         key={dashboardPath}

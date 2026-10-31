@@ -7,14 +7,18 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class AuthController extends Controller
 {
     public function forgotPassword(Request $request): JsonResponse
     {
+        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
+
         $data = $request->validate([
             'email' => ['required', 'email'],
         ]);
@@ -52,10 +56,12 @@ class AuthController extends Controller
 
     public function resetPassword(Request $request): JsonResponse
     {
+        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
+
         $data = $request->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', PasswordRule::min(12)->mixedCase()->numbers()->symbols(), 'confirmed'],
         ]);
 
         $status = Password::reset(
@@ -82,31 +88,33 @@ class AuthController extends Controller
 
     public function login(Request $request): JsonResponse
     {
+        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
+
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $credentials['email'])->first();
-
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        if (!Auth::attempt($credentials)) {
             return response()->json([
                 'message' => 'Adresse e-mail ou mot de passe incorrect.',
             ], 401);
         }
 
-        $token = $user->createToken('frontend')->plainTextToken;
+        $request->session()->regenerate();
+        $user = $request->user();
 
         return response()->json([
             'message' => 'Connexion réussie.',
-            'token' => $token,
             'user' => $user,
         ]);
     }
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json([
             'message' => 'Déconnexion réussie.',
@@ -115,11 +123,13 @@ class AuthController extends Controller
 
     public function register(Request $request): JsonResponse
     {
+        $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'company_name' => ['required', 'string', 'max:255'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', PasswordRule::min(12)->mixedCase()->numbers()->symbols(), 'confirmed'],
             'role' => ['required', 'string', 'in:employee,admin,comptable'],
         ]);
 
@@ -140,13 +150,12 @@ class AuthController extends Controller
             return compact('company', 'user');
         });
 
-        $token = $result['user']->createToken('frontend')->plainTextToken;
+        $result['user']->sendEmailVerificationNotification();
+        Auth::login($result['user']);
+        $request->session()->regenerate();
 
         return response()->json([
             'message' => 'Compte créé avec succès.',
-            'token' => $token,
-            'user_id' => $result['user']->id,
-            'company' => $result['company'],
             'user' => $result['user'],
         ], 201);
     }

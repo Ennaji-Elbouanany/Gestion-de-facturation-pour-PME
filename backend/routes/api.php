@@ -12,33 +12,35 @@ use App\Http\Controllers\SettingsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('web')->post('/register', [AuthController::class, 'register']);
+Route::middleware(['web', 'throttle:login'])->post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
-Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+Route::middleware(['web', 'auth:sanctum'])->post('/logout', [AuthController::class, 'logout']);
 
-Route::middleware('auth:sanctum')->get('/dashboard/summary', [DashboardController::class, 'summary']);
-Route::middleware('auth:sanctum')->apiResource('clients', ClientController::class);
-Route::middleware('auth:sanctum')->apiResource('products', ProductController::class);
-Route::middleware('auth:sanctum')->apiResource('invoices', InvoiceController::class);
-Route::middleware('auth:sanctum')->patch('/invoices/{invoice}/status', [InvoiceController::class, 'updateStatus']);
-Route::middleware('auth:sanctum')->apiResource('invoices.payments', PaymentController::class)->scoped()->parameters(['payments' => 'payment']);
-Route::middleware('auth:sanctum')->get('/payments', [PaymentController::class, 'all']);
-Route::middleware('auth:sanctum')->apiResource('quotes', QuoteController::class);
-Route::middleware('auth:sanctum')->patch('/quotes/{quote}/status', [QuoteController::class, 'updateStatus']);
-Route::middleware('auth:sanctum')->post('/quotes/{quote}/convert', [QuoteController::class, 'convertToInvoice']);
-Route::middleware('auth:sanctum')->apiResource('quotes.items', QuoteItemController::class)->scoped(['item' => 'quoteItem'])->parameters(['items' => 'quoteItem']);
+Route::middleware(['web', 'auth:sanctum'])->group(function (): void {
+    Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
+    Route::apiResource('clients', ClientController::class);
+    Route::apiResource('products', ProductController::class);
+    Route::apiResource('invoices', InvoiceController::class);
+    Route::patch('/invoices/{invoice}/status', [InvoiceController::class, 'updateStatus']);
+    Route::apiResource('invoices.payments', PaymentController::class)->scoped()->parameters(['payments' => 'payment']);
+    Route::get('/payments', [PaymentController::class, 'all']);
+    Route::apiResource('quotes', QuoteController::class);
+    Route::patch('/quotes/{quote}/status', [QuoteController::class, 'updateStatus']);
+    Route::post('/quotes/{quote}/convert', [QuoteController::class, 'convertToInvoice']);
+    Route::apiResource('quotes.items', QuoteItemController::class)->scoped(['item' => 'quoteItem'])->parameters(['items' => 'quoteItem']);
 
-Route::middleware('auth:sanctum')->get('/settings', [SettingsController::class, 'show']);
-Route::middleware('auth:sanctum')->patch('/settings/profile', [SettingsController::class, 'updateProfile']);
-Route::middleware('auth:sanctum')->patch('/settings/company', [SettingsController::class, 'updateCompany']);
-Route::middleware('auth:sanctum')->patch('/settings/billing', [SettingsController::class, 'updateBilling']);
-Route::middleware('auth:sanctum')->patch('/settings/documents', [SettingsController::class, 'updateDocuments']);
-Route::middleware('auth:sanctum')->patch('/settings/notifications', [SettingsController::class, 'updateNotifications']);
-Route::middleware('auth:sanctum')->patch('/settings/security', [SettingsController::class, 'updateSecurity']);
+    Route::get('/settings', [SettingsController::class, 'show']);
+    Route::patch('/settings/profile', [SettingsController::class, 'updateProfile']);
+    Route::patch('/settings/company', [SettingsController::class, 'updateCompany']);
+    Route::patch('/settings/billing', [SettingsController::class, 'updateBilling']);
+    Route::patch('/settings/documents', [SettingsController::class, 'updateDocuments']);
+    Route::patch('/settings/notifications', [SettingsController::class, 'updateNotifications']);
+    Route::patch('/settings/security', [SettingsController::class, 'updateSecurity']);
+});
 
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware(['web', 'auth:sanctum']);

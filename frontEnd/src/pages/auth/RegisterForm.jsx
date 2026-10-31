@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import './RegisterForm.css'
 import { authRequest } from '../../services/auth'
+import PasswordField from './PasswordField'
 
 function RegisterForm({ onLoginClick, onBackToLanding, onRegistrationSuccess }) {
   const [formData, setFormData] = useState({
@@ -17,10 +18,11 @@ function RegisterForm({ onLoginClick, onBackToLanding, onRegistrationSuccess }) 
 
   function handleChange(event) {
     const { name, value } = event.target
+    const nextValue = name === 'email' ? value.trim().toLowerCase() : value
 
     setFormData((currentData) => ({
       ...currentData,
-      [name]: value,
+      [name]: nextValue,
     }))
 
     setMessage('')
@@ -28,6 +30,15 @@ function RegisterForm({ onLoginClick, onBackToLanding, onRegistrationSuccess }) 
 
   async function handleSubmit(event) {
     event.preventDefault()
+
+    if (!/[A-Z]/.test(formData.password)
+      || !/[a-z]/.test(formData.password)
+      || !/\d/.test(formData.password)
+      || !/[^A-Za-z0-9]/.test(formData.password)
+      || formData.password.length < 12) {
+      setMessage('Le mot de passe doit contenir au moins 12 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.')
+      return
+    }
 
     if (formData.password !== formData.password_confirmation) {
       setMessage('Les mots de passe ne correspondent pas.')
@@ -50,11 +61,10 @@ function RegisterForm({ onLoginClick, onBackToLanding, onRegistrationSuccess }) 
         }),
       }, 'Impossible de créer le compte.')
 
-      if (typeof result.token !== 'string' || !result.token) {
+      if (!result.user) {
         throw new Error('Impossible de créer le compte.')
       }
 
-      localStorage.setItem('auth_token', result.token)
       setMessage('Inscription réussie')
       setFormData({
         name: '',
@@ -144,33 +154,8 @@ function RegisterForm({ onLoginClick, onBackToLanding, onRegistrationSuccess }) 
             required
           />
 
-          <label htmlFor="password">Mot de passe</label>
-
-          <input
-            id="password"
-            name="password"
-            type="password"
-            value={formData.password}
-            onChange={handleChange}
-            autoComplete="new-password"
-            minLength={8}
-            required
-          />
-
-          <label htmlFor="password_confirmation">
-            Confirmer le mot de passe
-          </label>
-
-          <input
-            id="password_confirmation"
-            name="password_confirmation"
-            type="password"
-            value={formData.password_confirmation}
-            onChange={handleChange}
-            autoComplete="new-password"
-            minLength={8}
-            required
-          />
+          <PasswordField id="password" label="Mot de passe" value={formData.password} onChange={handleChange} autoComplete="new-password" showStrength />
+          <PasswordField id="password_confirmation" label="Confirmer le mot de passe" value={formData.password_confirmation} onChange={handleChange} autoComplete="new-password" />
 
           <div className="register-actions">
             <button type="submit" disabled={isSubmitting}>

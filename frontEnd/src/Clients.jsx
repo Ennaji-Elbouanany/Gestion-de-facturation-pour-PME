@@ -11,6 +11,7 @@ function Clients() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState('')
+  const [pagination, setPagination] = useState(null)
 
   const request = useCallback(async (path, options = {}) => {
     const token = localStorage.getItem('auth_token')
@@ -36,13 +37,14 @@ function Clients() {
     return result
   }, [])
 
-  const loadClients = useCallback(async () => {
+  const loadClients = useCallback(async (page = 1) => {
     setIsLoading(true)
     setMessage('')
 
     try {
-      const response = await request('/api/clients')
-      setClients(response)
+      const response = await request(`/api/clients?per_page=25&page=${page}`)
+      setClients(Array.isArray(response) ? response : response.data)
+      setPagination(Array.isArray(response) ? null : response)
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -146,8 +148,9 @@ function Clients() {
       </form>}
 
       <section className="clients-panel">
-        <div className="clients-panel-heading"><div><h2>Liste des clients</h2><p>{clients.length} client{clients.length !== 1 ? 's' : ''}</p></div><button className="refresh-button" type="button" onClick={loadClients}>Actualiser</button></div>
+        <div className="clients-panel-heading"><div><h2>Liste des clients</h2><p>{pagination?.total ?? clients.length} client{(pagination?.total ?? clients.length) !== 1 ? 's' : ''}</p></div><button className="refresh-button" type="button" onClick={() => loadClients(pagination?.current_page || 1)}>Actualiser</button></div>
         {isLoading ? <p className="empty-state">Chargement des clients...</p> : clients.length === 0 ? <p className="empty-state">Aucun client pour le moment. Ajoutez votre premier client.</p> : <div className="clients-table"><div className="client-row client-row-head"><span>CLIENT</span><span>E-MAIL</span><span>TÉLÉPHONE</span><span>VILLE</span><span>ACTIONS</span></div>{clients.map((client) => <div className="client-row" key={client.id}><strong>{client.name}</strong><span>{client.email || '—'}</span><span>{client.phone || '—'}</span><span>{client.city || '—'}</span><div className="client-actions"><button type="button" onClick={() => openEditForm(client)}>Modifier</button><button className="delete-button" type="button" onClick={() => handleDelete(client)}>Supprimer</button></div></div>)}</div>}
+        {pagination && pagination.last_page > 1 && <div className="clients-panel-heading"><button className="refresh-button" type="button" disabled={!pagination.prev_page_url} onClick={() => loadClients(pagination.current_page - 1)}>Précédent</button><span>Page {pagination.current_page} sur {pagination.last_page}</span><button className="refresh-button" type="button" disabled={!pagination.next_page_url} onClick={() => loadClients(pagination.current_page + 1)}>Suivant</button></div>}
       </section>
     </section>
   )

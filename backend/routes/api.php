@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
@@ -18,6 +19,7 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
+Route::middleware('auth:sanctum')->get('/dashboard/summary', [DashboardController::class, 'summary']);
 Route::middleware('auth:sanctum')->apiResource('clients', ClientController::class);
 Route::middleware('auth:sanctum')->apiResource('products', ProductController::class);
 Route::middleware('auth:sanctum')->apiResource('invoices', InvoiceController::class);

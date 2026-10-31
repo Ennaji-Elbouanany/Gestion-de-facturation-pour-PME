@@ -234,8 +234,8 @@ function formatNumber(value) {
   return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(num(value))
 }
 
-function Overview({ onNavigate }) {
-  const [user, setUser] = useState(null)
+function Overview({ user: initialUser, onNavigate }) {
+  const user = initialUser
   const [clients, setClients] = useState([])
   const [products, setProducts] = useState([])
   const [invoices, setInvoices] = useState([])
@@ -245,6 +245,7 @@ function Overview({ onNavigate }) {
   const [loadedOnce, setLoadedOnce] = useState(false)
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
+  const [summary, setSummary] = useState(null)
 
   const request = useCallback(async (path, options = {}) => {
     const token = localStorage.getItem('auth_token')
@@ -275,8 +276,12 @@ function Overview({ onNavigate }) {
     setError('')
 
     try {
-      const [userData, invoicesData, clientsData, productsData, quotesData, paymentsData] = await Promise.all([
-        request('/api/user'),
+      const summaryData = await request('/api/dashboard/summary')
+      setSummary(summaryData)
+      setLoading(false)
+      setLoadedOnce(true)
+
+      const [invoicesData, clientsData, productsData, quotesData, paymentsData] = await Promise.all([
         request('/api/invoices'),
         request('/api/clients'),
         request('/api/products'),
@@ -284,23 +289,19 @@ function Overview({ onNavigate }) {
         request('/api/payments'),
       ])
 
-      const invoiceList = Array.isArray(invoicesData) ? invoicesData : []
-
       const allPayments = (Array.isArray(paymentsData) ? paymentsData : []).map((payment) => ({
         ...payment,
         invoice_number: payment.invoice?.invoice_number || '',
         client: payment.invoice?.client || null,
       }))
 
-      setUser(userData && userData.id ? userData : null)
-      setInvoices(invoiceList)
+      setInvoices(Array.isArray(invoicesData) ? invoicesData : [])
       setClients(Array.isArray(clientsData) ? clientsData : [])
       setProducts(Array.isArray(productsData) ? productsData : [])
       setQuotes(Array.isArray(quotesData) ? quotesData : [])
       setPayments(allPayments)
     } catch (err) {
       setError(err.message)
-    } finally {
       setLoading(false)
       setLoadedOnce(true)
     }
@@ -580,10 +581,10 @@ function Overview({ onNavigate }) {
       </section>
 
       <section className="stats-strip" aria-label="Statistiques complémentaires">
-        <div className="stat-chip"><span className="stat-chip__label">Clients</span><strong>{clients.length}</strong><small><em className="trend is-up">+{stats.newClientsThisMonth}</em> ce mois-ci</small></div>
-        <div className="stat-chip"><span className="stat-chip__label">Devis en attente</span><strong>{stats.pendingQuotes.length}</strong><small>{formatPrice(stats.pendingQuotesAmount)} au total</small></div>
+        <div className="stat-chip"><span className="stat-chip__label">Clients</span><strong>{summary?.clients_count ?? clients.length}</strong><small><em className="trend is-up">+{stats.newClientsThisMonth}</em> ce mois-ci</small></div>
+        <div className="stat-chip"><span className="stat-chip__label">Devis en attente</span><strong>{stats.pendingQuotes.length || summary?.quotes_count || 0}</strong><small>{formatPrice(stats.pendingQuotesAmount)} au total</small></div>
         <div className="stat-chip"><span className="stat-chip__label">Taux de recouvrement</span><strong>{stats.recoveryRate} %</strong><small>encaissé / facturé</small></div>
-        <div className="stat-chip"><span className="stat-chip__label">Produits au catalogue</span><strong>{products.length}</strong><small>références disponibles</small></div>
+        <div className="stat-chip"><span className="stat-chip__label">Produits au catalogue</span><strong>{summary?.products_count ?? products.length}</strong><small>références disponibles</small></div>
       </section>
 
       {hasData ? (

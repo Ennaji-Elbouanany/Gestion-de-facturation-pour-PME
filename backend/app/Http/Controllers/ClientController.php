@@ -5,14 +5,26 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ClientController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $clients = Client::where('company_id', $request->user()->company_id)
-            ->latest()
-            ->get();
+        $companyId = $request->user()->company_id;
+        $query = Client::where('company_id', $companyId)->latest();
+
+        if ($request->filled('per_page')) {
+            $perPage = max(1, min((int) $request->input('per_page'), 100));
+
+            return response()->json($query->paginate($perPage));
+        }
+
+        $clients = Cache::remember(
+            "clients-company-{$companyId}",
+            now()->addSeconds(60),
+            fn () => $query->get()
+        );
 
         return response()->json($clients);
     }
@@ -33,6 +45,8 @@ class ClientController extends Controller
             ...$data,
             'company_id' => $request->user()->company_id,
         ]);
+
+        $this->forgetCompanyCaches($request->user()->company_id);
 
         return response()->json($client, 201);
     }
@@ -59,6 +73,7 @@ class ClientController extends Controller
         ]);
 
         $client->update($data);
+        $this->forgetCompanyCaches($request->user()->company_id);
 
         return response()->json($client->fresh());
     }
@@ -67,6 +82,7 @@ class ClientController extends Controller
     {
         $this->ensureBelongsToCompany($request, $client);
         $client->delete();
+        $this->forgetCompanyCaches($request->user()->company_id);
 
         return response()->json([
             'message' => 'Client supprimé avec succès.',
@@ -79,5 +95,11 @@ class ClientController extends Controller
             $client->company_id === $request->user()->company_id,
             404
         );
+    }
+
+    private function forgetCompanyCaches(int $companyId): void
+    {
+        Cache::forget("clients-company-{$companyId}");
+        Cache::forget("dashboard-summary-company-{$companyId}");
     }
 }

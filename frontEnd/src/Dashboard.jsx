@@ -66,7 +66,7 @@ function Dashboard({ onLogout, onGoToLanding }) {
       </aside>
 
       <section className="dashboard-content">
-        {activeItem === 'Paiements' ? <Payments /> : activeItem === 'Clients' ? <Clients /> : activeItem === 'Produits' ? <Products /> : activeItem === 'Factures' ? <Invoices /> : activeItem === 'Devis' ? <Quotes /> : activeItem === 'Paramètres' ? <Settings /> : <Overview onNavigate={setActiveItem} />}
+        {activeItem === 'Paiements' ? <Payments /> : activeItem === 'Clients' ? <Clients /> : activeItem === 'Produits' ? <Products /> : activeItem === 'Factures' ? <Invoices /> : activeItem === 'Devis' ? <Quotes /> : activeItem === 'Paramètres' ? <Settings /> : <Overview user={user} onNavigate={setActiveItem} />}
       </section>
     </main>
   )

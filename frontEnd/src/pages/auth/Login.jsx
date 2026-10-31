@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import './Login.css'
-
-const LOGIN_URL = `${import.meta.env.VITE_API_URL}/api/login`
+import { authRequest } from '../../services/auth'
 
 function Login({ onLogin, onRegisterClick, onForgotPasswordClick, onBackToLanding }) {
   const [formData, setFormData] = useState({
@@ -27,34 +26,21 @@ function Login({ onLogin, onRegisterClick, onForgotPasswordClick, onBackToLandin
     setMessage('')
 
     try {
-      const response = await fetch(LOGIN_URL, {
+      const result = await authRequest('/api/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
         body: JSON.stringify(formData),
-      })
+      }, 'Adresse e-mail ou mot de passe incorrect.')
 
-      const result = await response.json()
-
-      if (!response.ok) {
-        const validationMessage = result.errors
-          ? Object.values(result.errors).flat().join(' ')
-          : result.message
-
-        throw new Error(
-          validationMessage || 'Adresse e-mail ou mot de passe incorrect.'
-        )
+      if (typeof result.token !== 'string' || !result.token) {
+        throw new Error('Adresse e-mail ou mot de passe incorrect.')
       }
 
-      if (result.token) {
-        localStorage.setItem('auth_token', result.token)
-      }
-
-      onLogin?.(result)
+      localStorage.setItem('auth_token', result.token)
+      setFormData({ email: '', password: '' })
+      onLogin?.()
     } catch (error) {
-      setMessage(error.message || 'Une erreur est survenue. Réessayez.')
+      setFormData((currentData) => ({ ...currentData, password: '' }))
+      setMessage(error.message || 'Adresse e-mail ou mot de passe incorrect.')
     } finally {
       setIsSubmitting(false)
     }

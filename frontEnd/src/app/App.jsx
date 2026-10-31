@@ -126,7 +126,11 @@ function App() {
     ) : page === 'reset-password' ? (
       <ResetPassword onLoginClick={showLogin} />
     ) : (
-      <RegisterForm onLoginClick={showLogin} onBackToLanding={showLanding} />
+      <RegisterForm
+        onLoginClick={showLogin}
+        onBackToLanding={showLanding}
+        onRegistrationSuccess={showDashboard}
+      />
     )
   )
 }

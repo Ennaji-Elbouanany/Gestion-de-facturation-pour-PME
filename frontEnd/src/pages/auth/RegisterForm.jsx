@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import './RegisterForm.css'
+import { authRequest } from '../../services/auth'
 
-
-const REGISTER_URL = `${import.meta.env.VITE_API_URL}/api/register`
-
-function RegisterForm({ onLoginClick, onBackToLanding }) {
+function RegisterForm({ onLoginClick, onBackToLanding, onRegistrationSuccess }) {
   const [formData, setFormData] = useState({
     name: '',
     company_name: '',
@@ -15,7 +13,6 @@ function RegisterForm({ onLoginClick, onBackToLanding }) {
   })
 
   const [message, setMessage] = useState('')
-  const [registrationResult, setRegistrationResult] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   function handleChange(event) {
@@ -27,7 +24,6 @@ function RegisterForm({ onLoginClick, onBackToLanding }) {
     }))
 
     setMessage('')
-    setRegistrationResult(null)
   }
 
   async function handleSubmit(event) {
@@ -42,12 +38,8 @@ function RegisterForm({ onLoginClick, onBackToLanding }) {
     setMessage('')
 
     try {
-      const response = await fetch(REGISTER_URL, {
+      const result = await authRequest('/api/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
         body: JSON.stringify({
           name: formData.name,
           company_name: formData.company_name,
@@ -56,27 +48,14 @@ function RegisterForm({ onLoginClick, onBackToLanding }) {
           password: formData.password,
           password_confirmation: formData.password_confirmation,
         }),
-      })
+      }, 'Impossible de créer le compte.')
 
-      const result = await response.json()
-
-      if (!response.ok) {
-        const validationMessage = result.errors
-          ? Object.values(result.errors).flat().join(' ')
-          : result.message
-
-        throw new Error(
-          validationMessage || 'Impossible de créer le compte.'
-        )
+      if (typeof result.token !== 'string' || !result.token) {
+        throw new Error('Impossible de créer le compte.')
       }
 
       localStorage.setItem('auth_token', result.token)
-      setRegistrationResult({
-        token: result.token,
-        userId: result.user_id,
-      })
-      setMessage('Votre compte a été créé avec succès.')
-
+      setMessage('Inscription réussie')
       setFormData({
         name: '',
         company_name: '',
@@ -85,10 +64,9 @@ function RegisterForm({ onLoginClick, onBackToLanding }) {
         password: '',
         password_confirmation: '',
       })
+      window.setTimeout(() => onRegistrationSuccess?.(), 500)
     } catch (error) {
-      setMessage(
-        error.message || 'Une erreur est survenue. Réessayez.'
-      )
+      setMessage(error.message || 'Impossible de créer le compte.')
     } finally {
       setIsSubmitting(false)
     }
@@ -216,12 +194,6 @@ function RegisterForm({ onLoginClick, onBackToLanding }) {
             </p>
           )}
 
-          {registrationResult && (
-            <div className="register-message" role="status">
-              <p>ID utilisateur : {registrationResult.userId}</p>
-              <p>Token : {registrationResult.token}</p>
-            </div>
-          )}
         </form>
       </section>
     </main>

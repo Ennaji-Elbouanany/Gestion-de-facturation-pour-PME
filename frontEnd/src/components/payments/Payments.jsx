@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { apiRequest } from '../../services/api'
 import './Payments.css'
 import './PaymentsPage.css'
 
@@ -74,43 +75,20 @@ function Payments() {
   const [methodFilter, setMethodFilter] = useState('all')
   const [monthFilter, setMonthFilter] = useState('all')
 
-  const request = useCallback(async (path, options = {}) => {
-    const token = localStorage.getItem('auth_token')
-    const response = await fetch(`${import.meta.env.VITE_API_URL}${path}`, {
-      ...options,
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...options.headers,
-      },
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      const validationMessage = result.errors
-        ? Object.values(result.errors).flat().join(' ')
-        : result.message
-      throw new Error(validationMessage || 'Une erreur est survenue.')
-    }
-
-    return result
-  }, [])
 
   const loadPayments = useCallback(async () => {
     setIsLoading(true)
     setMessage('')
 
     try {
-      const response = await request('/api/payments')
+      const response = await apiRequest('/api/payments')
       setPayments(Array.isArray(response) ? response : [])
     } catch (error) {
       setMessage(error.message)
     } finally {
       setIsLoading(false)
     }
-  }, [request])
+  }, [])
 
   useEffect(() => {
     Promise.resolve().then(loadPayments)
@@ -170,7 +148,7 @@ function Payments() {
     setMessage('')
 
     try {
-      await request(`/api/invoices/${payment.invoice_id}/payments/${payment.id}`, { method: 'DELETE' })
+      await apiRequest(`/api/invoices/${payment.invoice_id}/payments/${payment.id}`, { method: 'DELETE' })
       setPayments((current) => current.filter((item) => item.id !== payment.id))
       setMessage('Paiement supprimé avec succès.')
     } catch (error) {

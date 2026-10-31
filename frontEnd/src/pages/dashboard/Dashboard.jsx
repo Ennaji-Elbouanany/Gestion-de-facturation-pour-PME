@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import Clients from './Clients'
-import Products from './Products'
-import Invoices from './Invoices'
-import Quotes from './Quotes'
-import Payments from './Payments'
+import Clients from '../../components/clients/Clients'
+import Products from '../../components/products/Products'
+import Invoices from '../../components/invoices/Invoices'
+import Quotes from '../../components/quotes/Quotes'
+import Payments from '../../components/payments/Payments'
 import './Dashboard.css'
 import Overview from './Overview'
-import Settings from './Settings'
+import Settings from '../../components/settings/Settings'
 import './DarkMode.css'
 
 const navigation = [

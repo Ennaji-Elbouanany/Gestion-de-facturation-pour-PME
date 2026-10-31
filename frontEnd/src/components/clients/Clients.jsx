@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { apiRequest } from '../../services/api'
 import './Clients.css'
 
 const emptyForm = { name: '', email: '', phone: '', city: '', country: '' }
@@ -13,36 +14,13 @@ function Clients() {
   const [message, setMessage] = useState('')
   const [pagination, setPagination] = useState(null)
 
-  const request = useCallback(async (path, options = {}) => {
-    const token = localStorage.getItem('auth_token')
-    const response = await fetch(`${import.meta.env.VITE_API_URL}${path}`, {
-      ...options,
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...options.headers,
-      },
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      const validationMessage = result.errors
-        ? Object.values(result.errors).flat().join(' ')
-        : result.message
-      throw new Error(validationMessage || 'Une erreur est survenue.')
-    }
-
-    return result
-  }, [])
 
   const loadClients = useCallback(async (page = 1) => {
     setIsLoading(true)
     setMessage('')
 
     try {
-      const response = await request(`/api/clients?per_page=25&page=${page}`)
+      const response = await apiRequest(`/api/clients?per_page=25&page=${page}`)
       setClients(Array.isArray(response) ? response : response.data)
       setPagination(Array.isArray(response) ? null : response)
     } catch (error) {
@@ -50,7 +28,7 @@ function Clients() {
     } finally {
       setIsLoading(false)
     }
-  }, [request])
+  }, [])
 
   useEffect(() => {
     Promise.resolve().then(loadClients)
@@ -98,7 +76,7 @@ function Clients() {
     try {
       const path = editingClient ? `/api/clients/${editingClient.id}` : '/api/clients'
       const method = editingClient ? 'PUT' : 'POST'
-      const client = await request(path, {
+      const client = await apiRequest(path, {
         method,
         body: JSON.stringify(formData),
       })
@@ -118,7 +96,7 @@ function Clients() {
     if (!window.confirm(`Supprimer le client ${client.name} ?`)) return
 
     try {
-      await request(`/api/clients/${client.id}`, { method: 'DELETE' })
+      await apiRequest(`/api/clients/${client.id}`, { method: 'DELETE' })
       setClients((currentClients) => currentClients.filter((item) => item.id !== client.id))
       setMessage('Client supprimé avec succès.')
     } catch (error) {

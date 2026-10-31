@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { apiRequest } from '../../services/api'
 import './Quotes.css'
 
 const emptyItem = { product_id: '', description: '', quantity: '1', unit_price: '', tax_rate: '' }
@@ -38,61 +39,38 @@ function Quotes() {
   const [editingItem, setEditingItem] = useState(null)
   const [isItemSubmitting, setIsItemSubmitting] = useState(false)
 
-  const request = useCallback(async (path, options = {}) => {
-    const token = localStorage.getItem('auth_token')
-    const response = await fetch(`${import.meta.env.VITE_API_URL}${path}`, {
-      ...options,
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...options.headers,
-      },
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      const validationMessage = result.errors
-        ? Object.values(result.errors).flat().join(' ')
-        : result.message
-      throw new Error(validationMessage || 'Une erreur est survenue.')
-    }
-
-    return result
-  }, [])
 
   const loadQuotes = useCallback(async () => {
     setIsLoading(true)
     setMessage('')
 
     try {
-      const response = await request('/api/quotes')
+      const response = await apiRequest('/api/quotes')
       setQuotes(response)
     } catch (error) {
       setMessage(error.message)
     } finally {
       setIsLoading(false)
     }
-  }, [request])
+  }, [])
 
   const loadClients = useCallback(async () => {
     try {
-      const response = await request('/api/clients')
+      const response = await apiRequest('/api/clients')
       setClients(response)
     } catch (error) {
       setMessage(error.message)
     }
-  }, [request])
+  }, [])
 
   const loadProducts = useCallback(async () => {
     try {
-      const response = await request('/api/products')
+      const response = await apiRequest('/api/products')
       setProducts(response)
     } catch (error) {
       setMessage(error.message)
     }
-  }, [request])
+  }, [])
 
   useEffect(() => {
     Promise.resolve().then(() => {
@@ -217,7 +195,7 @@ function Quotes() {
     try {
       const path = editingQuote ? `/api/quotes/${editingQuote.id}` : '/api/quotes'
       const method = editingQuote ? 'PUT' : 'POST'
-      const quote = await request(path, {
+      const quote = await apiRequest(path, {
         method,
         body: JSON.stringify(formData),
       })
@@ -237,7 +215,7 @@ function Quotes() {
     if (!window.confirm(`Supprimer le devis ${quote.quote_number} ?`)) return
 
     try {
-      await request(`/api/quotes/${quote.id}`, { method: 'DELETE' })
+      await apiRequest(`/api/quotes/${quote.id}`, { method: 'DELETE' })
       setQuotes((currentQuotes) => currentQuotes.filter((item) => item.id !== quote.id))
       setMessage('Devis supprimé avec succès.')
     } catch (error) {
@@ -247,7 +225,7 @@ function Quotes() {
 
   async function handleStatusChange(quote, status) {
     try {
-      const updatedQuote = await request(`/api/quotes/${quote.id}/status`, {
+      const updatedQuote = await apiRequest(`/api/quotes/${quote.id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       })
@@ -262,7 +240,7 @@ function Quotes() {
     if (!window.confirm(`Convertir le devis ${quote.quote_number} en facture ?`)) return
 
     try {
-      const invoice = await request(`/api/quotes/${quote.id}/convert`, { method: 'POST' })
+      const invoice = await apiRequest(`/api/quotes/${quote.id}/convert`, { method: 'POST' })
       setQuotes((currentQuotes) => currentQuotes.map((currentQuote) => currentQuote.id === quote.id ? { ...currentQuote, status: 'converted' } : currentQuote))
       setMessage(`Devis converti en facture ${invoice.invoice_number} avec succès.`)
     } catch (error) {
@@ -289,7 +267,7 @@ function Quotes() {
     setIsItemsLoading(true)
 
     try {
-      const response = await request(`/api/quotes/${quoteId}/items`)
+      const response = await apiRequest(`/api/quotes/${quoteId}/items`)
       setQuoteItems(response)
     } catch (error) {
       setMessage(error.message)
@@ -346,7 +324,7 @@ function Quotes() {
         ? `/api/quotes/${selectedQuote.id}/items/${editingItem.id}`
         : `/api/quotes/${selectedQuote.id}/items`
       const method = editingItem ? 'PUT' : 'POST'
-      const savedItem = await request(path, {
+      const savedItem = await apiRequest(path, {
         method,
         body: JSON.stringify(itemForm),
       })
@@ -370,7 +348,7 @@ function Quotes() {
     if (!window.confirm(`Supprimer la ligne "${item.description}" ?`)) return
 
     try {
-      await request(`/api/quotes/${selectedQuote.id}/items/${item.id}`, { method: 'DELETE' })
+      await apiRequest(`/api/quotes/${selectedQuote.id}/items/${item.id}`, { method: 'DELETE' })
       setQuoteItems((currentItems) => currentItems.filter((currentItem) => currentItem.id !== item.id))
       setMessage('Ligne supprimée avec succès.')
       loadQuotes()

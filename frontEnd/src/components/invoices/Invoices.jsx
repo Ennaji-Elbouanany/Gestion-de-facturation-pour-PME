@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
+import { apiRequest } from '../../services/api'
 import './Invoices.css'
-import './Payments.css'
+import '../payments/Payments.css'
 import './PaidInvoice.css'
 import './PaymentDeadline.css'
 
@@ -58,61 +59,38 @@ function Invoices() {
   const [isPaymentsLoading, setIsPaymentsLoading] = useState(false)
   const [isPaymentSubmitting, setIsPaymentSubmitting] = useState(false)
 
-  const request = useCallback(async (path, options = {}) => {
-    const token = localStorage.getItem('auth_token')
-    const response = await fetch(`${import.meta.env.VITE_API_URL}${path}`, {
-      ...options,
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...options.headers,
-      },
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      const validationMessage = result.errors
-        ? Object.values(result.errors).flat().join(' ')
-        : result.message
-      throw new Error(validationMessage || 'Une erreur est survenue.')
-    }
-
-    return result
-  }, [])
 
   const loadInvoices = useCallback(async () => {
     setIsLoading(true)
     setMessage('')
 
     try {
-      const response = await request('/api/invoices')
+      const response = await apiRequest('/api/invoices')
       setInvoices(response)
     } catch (error) {
       setMessage(error.message)
     } finally {
       setIsLoading(false)
     }
-  }, [request])
+  }, [])
 
   const loadClients = useCallback(async () => {
     try {
-      const response = await request('/api/clients')
+      const response = await apiRequest('/api/clients')
       setClients(response)
     } catch (error) {
       setMessage(error.message)
     }
-  }, [request])
+  }, [])
 
   const loadProducts = useCallback(async () => {
     try {
-      const response = await request('/api/products')
+      const response = await apiRequest('/api/products')
       setProducts(response)
     } catch (error) {
       setMessage(error.message)
     }
-  }, [request])
+  }, [])
 
   useEffect(() => {
     Promise.resolve().then(() => {
@@ -238,7 +216,7 @@ function Invoices() {
     try {
       const path = editingInvoice ? `/api/invoices/${editingInvoice.id}` : '/api/invoices'
       const method = editingInvoice ? 'PUT' : 'POST'
-      const invoice = await request(path, {
+      const invoice = await apiRequest(path, {
         method,
         body: JSON.stringify(formData),
       })
@@ -258,7 +236,7 @@ function Invoices() {
     if (!window.confirm(`Supprimer la facture ${invoice.invoice_number} ?`)) return
 
     try {
-      await request(`/api/invoices/${invoice.id}`, { method: 'DELETE' })
+      await apiRequest(`/api/invoices/${invoice.id}`, { method: 'DELETE' })
       setInvoices((currentInvoices) => currentInvoices.filter((item) => item.id !== invoice.id))
       setMessage('Facture supprimée avec succès.')
     } catch (error) {
@@ -268,7 +246,7 @@ function Invoices() {
 
   async function handleStatusChange(invoice, status) {
     try {
-      const updatedInvoice = await request(`/api/invoices/${invoice.id}/status`, {
+      const updatedInvoice = await apiRequest(`/api/invoices/${invoice.id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       })
@@ -280,7 +258,7 @@ function Invoices() {
   }
 
   async function refreshInvoice(invoiceId) {
-    const refreshedInvoice = await request(`/api/invoices/${invoiceId}`)
+    const refreshedInvoice = await apiRequest(`/api/invoices/${invoiceId}`)
     setInvoices((currentInvoices) => currentInvoices.map((invoice) => invoice.id === refreshedInvoice.id ? refreshedInvoice : invoice))
     setSelectedInvoice(refreshedInvoice)
     return refreshedInvoice
@@ -296,8 +274,8 @@ function Invoices() {
 
     try {
       const [paymentList, refreshedInvoice] = await Promise.all([
-        request(`/api/invoices/${invoice.id}/payments`),
-        request(`/api/invoices/${invoice.id}`),
+        apiRequest(`/api/invoices/${invoice.id}/payments`),
+        apiRequest(`/api/invoices/${invoice.id}`),
       ])
       setPayments(paymentList)
       setSelectedInvoice(refreshedInvoice)
@@ -368,7 +346,7 @@ function Invoices() {
       const path = editingPayment
         ? `/api/invoices/${selectedInvoice.id}/payments/${editingPayment.id}`
         : `/api/invoices/${selectedInvoice.id}/payments`
-      const payment = await request(path, {
+      const payment = await apiRequest(path, {
         method: editingPayment ? 'PUT' : 'POST',
         body: JSON.stringify(paymentForm),
       })
@@ -390,7 +368,7 @@ function Invoices() {
     if (!selectedInvoice || !window.confirm('Supprimer ce paiement ?')) return
 
     try {
-      await request(`/api/invoices/${selectedInvoice.id}/payments/${payment.id}`, { method: 'DELETE' })
+      await apiRequest(`/api/invoices/${selectedInvoice.id}/payments/${payment.id}`, { method: 'DELETE' })
       setPayments((currentPayments) => currentPayments.filter((currentPayment) => currentPayment.id !== payment.id))
       await refreshInvoice(selectedInvoice.id)
       if (editingPayment?.id === payment.id) cancelEditPayment()

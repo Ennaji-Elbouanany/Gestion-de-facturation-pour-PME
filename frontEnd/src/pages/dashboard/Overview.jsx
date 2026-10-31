@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { apiRequest } from '../../services/api'
 import './DashboardPlus.css'
 
 const statusMeta = {
@@ -247,46 +248,23 @@ function Overview({ user: initialUser, onNavigate }) {
   const [reloadKey, setReloadKey] = useState(0)
   const [summary, setSummary] = useState(null)
 
-  const request = useCallback(async (path, options = {}) => {
-    const token = localStorage.getItem('auth_token')
-    const response = await fetch(`${import.meta.env.VITE_API_URL}${path}`, {
-      ...options,
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...options.headers,
-      },
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      const validationMessage = result.errors
-        ? Object.values(result.errors).flat().join(' ')
-        : result.message
-      throw new Error(validationMessage || 'Une erreur est survenue.')
-    }
-
-    return result
-  }, [])
 
   const loadAll = useCallback(async () => {
     setLoading(true)
     setError('')
 
     try {
-      const summaryData = await request('/api/dashboard/summary')
+      const summaryData = await apiRequest('/api/dashboard/summary')
       setSummary(summaryData)
       setLoading(false)
       setLoadedOnce(true)
 
       const [invoicesData, clientsData, productsData, quotesData, paymentsData] = await Promise.all([
-        request('/api/invoices'),
-        request('/api/clients'),
-        request('/api/products'),
-        request('/api/quotes'),
-        request('/api/payments'),
+        apiRequest('/api/invoices'),
+        apiRequest('/api/clients'),
+        apiRequest('/api/products'),
+        apiRequest('/api/quotes'),
+        apiRequest('/api/payments'),
       ])
 
       const allPayments = (Array.isArray(paymentsData) ? paymentsData : []).map((payment) => ({
@@ -305,7 +283,7 @@ function Overview({ user: initialUser, onNavigate }) {
       setLoading(false)
       setLoadedOnce(true)
     }
-  }, [request])
+  }, [])
 
   useEffect(() => {
     Promise.resolve().then(loadAll)

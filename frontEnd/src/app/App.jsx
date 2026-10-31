@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import RegisterForm from './RegisterForm'
-import Login from './Login'
-import ForgotPassword from './ForgotPassword'
-import ResetPassword from './ResetPassword'
-import Dashboard from './Dashboard'
-import Landing from './Landing'
-import './App.css'
+import RegisterForm from '../pages/auth/RegisterForm'
+import Login from '../pages/auth/Login'
+import ForgotPassword from '../pages/auth/ForgotPassword'
+import ResetPassword from '../pages/auth/ResetPassword'
+import Dashboard from '../pages/dashboard/Dashboard'
+import Landing from '../pages/auth/Landing'
+import '../styles/App.css'
 
 const protectedPaths = new Set(['/dashboard', '/payments', '/invoices', '/clients', '/products', '/quotes', '/settings'])
 

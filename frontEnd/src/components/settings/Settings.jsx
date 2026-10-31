@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { apiRequest } from '../../services/api'
 import './Settings.css'
 
 const sections = [
@@ -75,36 +76,13 @@ function Settings() {
   const [notificationsForm, setNotificationsForm] = useState(emptyNotificationsForm)
   const [securityForm, setSecurityForm] = useState(emptySecurityForm)
 
-  const request = useCallback(async (path, options = {}) => {
-    const token = localStorage.getItem('auth_token')
-    const response = await fetch(`${import.meta.env.VITE_API_URL}${path}`, {
-      ...options,
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...options.headers,
-      },
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      const validationMessage = result.errors
-        ? Object.values(result.errors).flat().join(' ')
-        : result.message
-      throw new Error(validationMessage || 'Une erreur est survenue.')
-    }
-
-    return result
-  }, [])
 
   const loadSettings = useCallback(async () => {
     setIsLoading(true)
     setMessage('')
 
     try {
-      const result = await request('/api/settings')
+      const result = await apiRequest('/api/settings')
       setUser(result.user)
       setProfileForm({ name: result.user.name || '', email: result.user.email || '' })
       setCompanyForm(pickCompany(result.company))
@@ -117,7 +95,7 @@ function Settings() {
     } finally {
       setIsLoading(false)
     }
-  }, [request])
+  }, [])
 
   useEffect(() => {
     Promise.resolve().then(loadSettings)
@@ -136,7 +114,7 @@ function Settings() {
     setMessage('')
 
     try {
-      const result = await request(path, { method: 'PATCH', body: JSON.stringify(payload) })
+      const result = await apiRequest(path, { method: 'PATCH', body: JSON.stringify(payload) })
       onSuccess?.(result)
       setMessageType('success')
       setMessage(result.message || 'Modifications enregistrées avec succès.')

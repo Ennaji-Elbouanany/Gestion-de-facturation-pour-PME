@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { apiRequest } from '../../services/api'
 import './Products.css'
 
 const emptyForm = { name: '', description: '', unit_price: '', tax_rate: '' }
@@ -12,43 +13,20 @@ function Products() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState('')
 
-  const request = useCallback(async (path, options = {}) => {
-    const token = localStorage.getItem('auth_token')
-    const response = await fetch(`${import.meta.env.VITE_API_URL}${path}`, {
-      ...options,
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...options.headers,
-      },
-    })
-
-    const result = await response.json()
-
-    if (!response.ok) {
-      const validationMessage = result.errors
-        ? Object.values(result.errors).flat().join(' ')
-        : result.message
-      throw new Error(validationMessage || 'Une erreur est survenue.')
-    }
-
-    return result
-  }, [])
 
   const loadProducts = useCallback(async () => {
     setIsLoading(true)
     setMessage('')
 
     try {
-      const response = await request('/api/products')
+      const response = await apiRequest('/api/products')
       setProducts(response)
     } catch (error) {
       setMessage(error.message)
     } finally {
       setIsLoading(false)
     }
-  }, [request])
+  }, [])
 
   useEffect(() => {
     Promise.resolve().then(loadProducts)
@@ -95,7 +73,7 @@ function Products() {
     try {
       const path = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products'
       const method = editingProduct ? 'PUT' : 'POST'
-      const product = await request(path, {
+      const product = await apiRequest(path, {
         method,
         body: JSON.stringify(formData),
       })
@@ -115,7 +93,7 @@ function Products() {
     if (!window.confirm(`Supprimer le produit ${product.name} ?`)) return
 
     try {
-      await request(`/api/products/${product.id}`, { method: 'DELETE' })
+      await apiRequest(`/api/products/${product.id}`, { method: 'DELETE' })
       setProducts((currentProducts) => currentProducts.filter((item) => item.id !== product.id))
       setMessage('Produit supprimé avec succès.')
     } catch (error) {

@@ -11,7 +11,7 @@ function getPasswordChecks(value) {
 }
 
 function PasswordField({ id, name = id, label, value, onChange, autoComplete, showStrength = false }) {
-  const [isVisible, setIsVisible] = useState(false)
+  const [isVisible, setIsVisible] = useState(true)
   const checks = getPasswordChecks(value)
 
   return (
@@ -32,9 +32,20 @@ function PasswordField({ id, name = id, label, value, onChange, autoComplete, sh
           className="password-visibility-button"
           type="button"
           onClick={() => setIsVisible((visible) => !visible)}
-          aria-label={isVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+          aria-label="Changer la visibilité du mot de passe"
+          title="Changer la visibilité du mot de passe"
         >
-          {isVisible ? 'Masquer' : 'Afficher'}
+          {isVisible ? (
+            <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+              <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+              <circle cx="12" cy="12" r="2.5" />
+            </svg>
+          ) : (
+            <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+              <path d="m3 3 18 18" />
+              <path d="M10.6 6.2A10.7 10.7 0 0 1 12 6c6 0 9.5 6 9.5 6a17.5 17.5 0 0 1-3.1 3.8M6.2 6.3C3.9 7.7 2.5 12 2.5 12s3.5 6 9.5 6c1.2 0 2.3-.2 3.3-.6" />
+            </svg>
+          )}
         </button>
       </div>
       {showStrength && (

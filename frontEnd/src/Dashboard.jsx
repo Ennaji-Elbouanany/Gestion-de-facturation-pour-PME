@@ -20,8 +20,8 @@ const navigation = [
 
 
 
-function Dashboard({ onLogout, onGoToLanding }) {
-  const [activeItem, setActiveItem] = useState('Vue d’ensemble')
+function Dashboard({ initialSection = 'Vue d’ensemble', onNavigate, onLogout, onGoToLanding }) {
+  const [activeItem] = useState(initialSection)
   const [user, setUser] = useState(null)
   const [isDark, setIsDark] = useState(() => localStorage.getItem('dark_mode') === '1')
 
@@ -37,7 +37,7 @@ function Dashboard({ onLogout, onGoToLanding }) {
     })
       .then((response) => (response.ok ? response.json() : null))
       .then((result) => { result && setUser(result) })
-      .catch(() => {})
+      .catch((error) => console.error('Impossible de récupérer le profil utilisateur.', error))
   }, [])
 
   const initials = user?.name
@@ -56,17 +56,17 @@ function Dashboard({ onLogout, onGoToLanding }) {
         <button className="brand-lockup brand-link" type="button" onClick={onGoToLanding} aria-label="Retourner à l'accueil de Factura"><span className="brand-mark">F</span><span>Factura</span></button>
         <p className="sidebar-label">Espace de travail</p>
         <nav className="dashboard-nav" aria-label="Navigation principale">
-          {navigation.map((item) => <button className={activeItem === item.label ? 'nav-item active' : 'nav-item'} key={item.label} onClick={() => setActiveItem(item.label)} type="button"><span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}</button>)}
+          {navigation.map((item) => <button className={activeItem === item.label ? 'nav-item active' : 'nav-item'} key={item.label} onClick={() => onNavigate?.(item.label)} type="button"><span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}</button>)}
         </nav>
         <div className="sidebar-bottom">
           <button className="nav-item" type="button" onClick={handleToggleTheme} aria-pressed={isDark}><span className="nav-icon" aria-hidden="true">{isDark ? '☀' : '☾'}</span>{isDark ? 'Mode clair' : 'Mode sombre'}</button>
-          <button className={activeItem === 'Paramètres' ? 'nav-item active' : 'nav-item'} type="button" onClick={() => setActiveItem('Paramètres')}><span className="nav-icon" aria-hidden="true">⚙</span>Paramètres</button>
+          <button className={activeItem === 'Paramètres' ? 'nav-item active' : 'nav-item'} type="button" onClick={() => onNavigate?.('Paramètres')}><span className="nav-icon" aria-hidden="true">⚙</span>Paramètres</button>
           <button className="user-menu" type="button" onClick={onLogout}><span className="avatar">{initials}</span><span><strong>{user?.name || 'Alex Martin'}</strong><small>Se déconnecter</small></span><span className="logout-arrow" aria-hidden="true">↗</span></button>
         </div>
       </aside>
 
       <section className="dashboard-content">
-        {activeItem === 'Paiements' ? <Payments /> : activeItem === 'Clients' ? <Clients /> : activeItem === 'Produits' ? <Products /> : activeItem === 'Factures' ? <Invoices /> : activeItem === 'Devis' ? <Quotes /> : activeItem === 'Paramètres' ? <Settings /> : <Overview user={user} onNavigate={setActiveItem} />}
+        {activeItem === 'Paiements' ? <Payments /> : activeItem === 'Clients' ? <Clients /> : activeItem === 'Produits' ? <Products /> : activeItem === 'Factures' ? <Invoices /> : activeItem === 'Devis' ? <Quotes /> : activeItem === 'Paramètres' ? <Settings /> : <Overview user={user} onNavigate={onNavigate} />}
       </section>
     </main>
   )

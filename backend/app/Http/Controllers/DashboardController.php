@@ -7,9 +7,9 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Quote;
+use App\Support\CompanyCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 
 class DashboardController extends Controller
 {
@@ -17,9 +17,9 @@ class DashboardController extends Controller
     {
         $companyId = $request->user()->company_id;
 
-        $summary = Cache::remember(
-            "dashboard-summary-company-{$companyId}",
-            now()->addSeconds(30),
+        $summary = CompanyCache::remember(
+            CompanyCache::key($companyId, CompanyCache::DASHBOARD),
+            now()->addSeconds(60),
             fn () => [
                 'clients_count' => Client::where('company_id', $companyId)->count(),
                 'products_count' => Product::where('company_id', $companyId)->count(),

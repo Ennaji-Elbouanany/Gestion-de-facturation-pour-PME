@@ -2,22 +2,28 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Client;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Support\CompanyCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class InvoiceController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $invoices = Invoice::where('company_id', $request->user()->company_id)
-            ->with(['client:id,name', 'items'])
-            ->latest()
-            ->get();
+        $companyId = $request->user()->company_id;
+        $invoices = CompanyCache::remember(
+            CompanyCache::key($companyId, CompanyCache::INVOICES),
+            now()->addMinutes(2),
+            fn () => Invoice::where('company_id', $companyId)
+                ->with(['client:id,name', 'items'])
+                ->latest()
+                ->get()
+        );
 
         return response()->json($invoices);
     }
@@ -42,6 +48,8 @@ class InvoiceController extends Controller
 
             return $invoice->fresh(['client:id,name', 'items']);
         });
+
+        $this->forgetCompanyCaches($request->user()->company_id);
 
         return response()->json($invoice, 201);
     }
@@ -75,6 +83,8 @@ class InvoiceController extends Controller
             return $invoice->fresh(['client:id,name', 'items']);
         });
 
+        $this->forgetCompanyCaches($request->user()->company_id);
+
         return response()->json($invoice);
     }
 
@@ -82,6 +92,7 @@ class InvoiceController extends Controller
     {
         $this->ensureBelongsToCompany($request, $invoice);
         $invoice->delete();
+        $this->forgetCompanyCaches($request->user()->company_id);
 
         return response()->json([
             'message' => 'Facture supprimée avec succès.',
@@ -97,6 +108,7 @@ class InvoiceController extends Controller
         ]);
 
         $invoice->update(['status' => $data['status']]);
+        $this->forgetCompanyCaches($request->user()->company_id);
 
         return response()->json($invoice->fresh(['client:id,name', 'items']));
     }
@@ -188,7 +200,7 @@ class InvoiceController extends Controller
         $sequence = 1;
 
         if ($last) {
-            $sequence = (int) \Illuminate\Support\Str::afterLast($last, '-') + 1;
+            $sequence = (int) Str::afterLast($last, '-') + 1;
         }
 
         return sprintf('%s%s-%03d', $prefix, $year, $sequence);
@@ -199,6 +211,15 @@ class InvoiceController extends Controller
         abort_unless(
             $invoice->company_id === $request->user()->company_id,
             404
+        );
+    }
+
+    private function forgetCompanyCaches(int $companyId): void
+    {
+        CompanyCache::forget(
+            $companyId,
+            CompanyCache::INVOICES,
+            CompanyCache::DASHBOARD,
         );
     }
 }

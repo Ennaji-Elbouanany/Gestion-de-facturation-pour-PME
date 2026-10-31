@@ -6,18 +6,25 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Quote;
 use App\Models\QuoteItem;
+use App\Support\CompanyCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class QuoteController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $quotes = Quote::where('company_id', $request->user()->company_id)
-            ->with(['client:id,name', 'items'])
-            ->latest()
-            ->get();
+        $companyId = $request->user()->company_id;
+        $quotes = CompanyCache::remember(
+            CompanyCache::key($companyId, CompanyCache::QUOTES),
+            now()->addMinutes(2),
+            fn () => Quote::where('company_id', $companyId)
+                ->with(['client:id,name', 'items'])
+                ->latest()
+                ->get()
+        );
 
         return response()->json($quotes);
     }
@@ -42,6 +49,8 @@ class QuoteController extends Controller
 
             return $quote->fresh(['client:id,name', 'items']);
         });
+
+        $this->forgetCompanyCaches($request->user()->company_id);
 
         return response()->json($quote, 201);
     }
@@ -75,6 +84,8 @@ class QuoteController extends Controller
             return $quote->fresh(['client:id,name', 'items']);
         });
 
+        $this->forgetCompanyCaches($request->user()->company_id);
+
         return response()->json($quote);
     }
 
@@ -82,6 +93,7 @@ class QuoteController extends Controller
     {
         $this->ensureBelongsToCompany($request, $quote);
         $quote->delete();
+        $this->forgetCompanyCaches($request->user()->company_id);
 
         return response()->json([
             'message' => 'Devis supprimé avec succès.',
@@ -97,6 +109,7 @@ class QuoteController extends Controller
         ]);
 
         $quote->update(['status' => $data['status']]);
+        $this->forgetCompanyCaches($request->user()->company_id);
 
         return response()->json($quote->fresh(['client:id,name', 'items']));
     }
@@ -144,6 +157,11 @@ class QuoteController extends Controller
 
             return $invoice->fresh(['client:id,name', 'items']);
         });
+
+        $this->forgetCompanyCaches(
+            $request->user()->company_id,
+            includeInvoices: true,
+        );
 
         return response()->json($invoice, 201);
     }
@@ -227,7 +245,7 @@ class QuoteController extends Controller
         $sequence = 1;
 
         if ($last) {
-            $sequence = (int) \Illuminate\Support\Str::afterLast($last, '-') + 1;
+            $sequence = (int) Str::afterLast($last, '-') + 1;
         }
 
         return sprintf('DEV-%s-%03d', $year, $sequence);
@@ -245,7 +263,7 @@ class QuoteController extends Controller
         $sequence = 1;
 
         if ($last) {
-            $sequence = (int) \Illuminate\Support\Str::afterLast($last, '-') + 1;
+            $sequence = (int) Str::afterLast($last, '-') + 1;
         }
 
         return sprintf('FAC-%s-%03d', $year, $sequence);
@@ -257,5 +275,19 @@ class QuoteController extends Controller
             $quote->company_id === $request->user()->company_id,
             404
         );
+    }
+
+    private function forgetCompanyCaches(int $companyId, bool $includeInvoices = false): void
+    {
+        $resources = [
+            CompanyCache::QUOTES,
+            CompanyCache::DASHBOARD,
+        ];
+
+        if ($includeInvoices) {
+            $resources[] = CompanyCache::INVOICES;
+        }
+
+        CompanyCache::forget($companyId, ...$resources);
     }
 }

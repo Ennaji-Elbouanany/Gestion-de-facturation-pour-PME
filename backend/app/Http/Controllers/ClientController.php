@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Support\CompanyCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 
 class ClientController extends Controller
 {
@@ -20,9 +20,9 @@ class ClientController extends Controller
             return response()->json($query->paginate($perPage));
         }
 
-        $clients = Cache::remember(
-            "clients-company-{$companyId}",
-            now()->addSeconds(60),
+        $clients = CompanyCache::remember(
+            CompanyCache::key($companyId, CompanyCache::CLIENTS),
+            now()->addMinutes(5),
             fn () => $query->get()
         );
 
@@ -99,7 +99,12 @@ class ClientController extends Controller
 
     private function forgetCompanyCaches(int $companyId): void
     {
-        Cache::forget("clients-company-{$companyId}");
-        Cache::forget("dashboard-summary-company-{$companyId}");
+        CompanyCache::forget(
+            $companyId,
+            CompanyCache::CLIENTS,
+            CompanyCache::INVOICES,
+            CompanyCache::QUOTES,
+            CompanyCache::DASHBOARD,
+        );
     }
 }

@@ -21,6 +21,56 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
+## Production Redis cache on Render
+
+Local development remains database-backed (`CACHE_STORE=database`). Production uses
+Render's managed Redis-compatible service and does not put its URL in this repository.
+
+1. In the Render dashboard, create a Redis-compatible Key Value/Redis service in the
+   same region as the Laravel web service. Copy its internal Redis URL for a private
+   connection; use the external URL only when the services are not on the same
+   private network.
+2. In the Laravel web service's Environment settings, add
+   `CACHE_STORE=redis`, `REDIS_CLIENT=predis`, and `REDIS_URL=<the Render Redis URL>`.
+   Keep `REDIS_PASSWORD`, `REDIS_HOST`, and `REDIS_PORT` unset when the URL contains
+   all connection details. Set `CACHE_PREFIX=gestion-facturation` if the Redis
+   service is shared with another application.
+3. Do not add the Redis URL to `.env`, frontend environment variables, GitHub Actions,
+   logs, or committed files. Render environment variables are injected at runtime
+   and are not exposed to the React build.
+4. Deploy the backend after setting the variables. The Docker image uses Predis, so
+   the PHP Redis extension is not required. `REDIS_CLIENT=phpredis` is an alternative
+   only if the image is changed to install the `phpredis` extension.
+5. After deployment, run this Render shell command:
+   `php artisan tinker --execute="cache()->put('redis-healthcheck', 'ok', 60); dump(cache()->get('redis-healthcheck'));"`
+   Confirm it prints `ok`, inspect the service logs for Redis connection errors, and
+   call the authenticated dashboard and list endpoints.
+
+Cached responses are scoped by `company_id`: clients (5 minutes), products
+(10 minutes), invoices and quotations (2 minutes), and dashboard counts (1 minute).
+Writes invalidate the affected company keys, including invoice status changes caused
+by payments and quote-to-invoice conversion. A Predis connection failure is reported
+and read requests fall back to their database query; invalidation failures do not
+block a successful write. Tests use the array cache and never contact production Redis.
+
+Run focused checks locally from `backend`:
+
+```powershell
+php artisan test --filter=CacheIntegrationTest
+php artisan cache:clear
+php artisan tinker --execute="cache()->put('cache-test', 'ok', 60); dump(cache()->get('cache-test'));"
+```
+
+For production, verify the configured store without printing secrets:
+
+```powershell
+php artisan config:clear
+php artisan about
+php artisan tinker --execute="dump(config('cache.default')); cache()->put('redis-healthcheck', 'ok', 60); dump(cache()->get('redis-healthcheck'));"
+```
+
+Run `php artisan config:cache` only after the Render variables are configured.
+
 ## Learning Laravel
 
 Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.

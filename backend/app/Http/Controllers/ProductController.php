@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Support\CompanyCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -10,9 +11,12 @@ class ProductController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $products = Product::where('company_id', $request->user()->company_id)
-            ->latest()
-            ->get();
+        $companyId = $request->user()->company_id;
+        $products = CompanyCache::remember(
+            CompanyCache::key($companyId, CompanyCache::PRODUCTS),
+            now()->addMinutes(10),
+            fn () => Product::where('company_id', $companyId)->latest()->get()
+        );
 
         return response()->json($products);
     }
@@ -30,6 +34,8 @@ class ProductController extends Controller
             ...$data,
             'company_id' => $request->user()->company_id,
         ]);
+
+        $this->forgetCompanyCaches($request->user()->company_id);
 
         return response()->json($product, 201);
     }
@@ -53,6 +59,7 @@ class ProductController extends Controller
         ]);
 
         $product->update($data);
+        $this->forgetCompanyCaches($request->user()->company_id);
 
         return response()->json($product->fresh());
     }
@@ -61,6 +68,7 @@ class ProductController extends Controller
     {
         $this->ensureBelongsToCompany($request, $product);
         $product->delete();
+        $this->forgetCompanyCaches($request->user()->company_id);
 
         return response()->json([
             'message' => 'Produit supprimé avec succès.',
@@ -72,6 +80,15 @@ class ProductController extends Controller
         abort_unless(
             $product->company_id === $request->user()->company_id,
             404
+        );
+    }
+
+    private function forgetCompanyCaches(int $companyId): void
+    {
+        CompanyCache::forget(
+            $companyId,
+            CompanyCache::PRODUCTS,
+            CompanyCache::DASHBOARD,
         );
     }
 }

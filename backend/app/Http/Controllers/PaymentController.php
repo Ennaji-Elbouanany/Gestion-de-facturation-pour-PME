@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Support\CompanyCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -62,6 +63,7 @@ class PaymentController extends Controller
         ]);
 
         $this->refreshInvoiceStatus($invoice);
+        $this->forgetCompanyCaches($invoice->company_id);
 
         return response()->json($payment->fresh(), 201);
     }
@@ -97,6 +99,7 @@ class PaymentController extends Controller
         ]);
 
         $this->refreshInvoiceStatus($invoice);
+        $this->forgetCompanyCaches($invoice->company_id);
 
         return response()->json($payment->fresh());
     }
@@ -107,6 +110,7 @@ class PaymentController extends Controller
         $payment->delete();
 
         $this->refreshInvoiceStatus($invoice);
+        $this->forgetCompanyCaches($invoice->company_id);
 
         return response()->json([
             'message' => 'Paiement supprimé avec succès.',
@@ -175,6 +179,15 @@ class PaymentController extends Controller
         abort_unless(
             $payment->invoice_id === $invoice->id,
             404
+        );
+    }
+
+    private function forgetCompanyCaches(int $companyId): void
+    {
+        CompanyCache::forget(
+            $companyId,
+            CompanyCache::INVOICES,
+            CompanyCache::DASHBOARD,
         );
     }
 }

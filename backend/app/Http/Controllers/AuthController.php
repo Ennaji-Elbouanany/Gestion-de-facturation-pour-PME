@@ -95,14 +95,14 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (!Auth::attempt($credentials)) {
+        if (!Auth::guard('web')->attempt($credentials)) {
             return response()->json([
                 'message' => 'Adresse e-mail ou mot de passe incorrect.',
             ], 401);
         }
 
         $request->session()->regenerate();
-        $user = $request->user();
+        $user = Auth::guard('web')->user();
 
         return response()->json([
             'message' => 'Connexion réussie.',
@@ -158,7 +158,7 @@ class AuthController extends Controller
             ]);
         }
 
-        Auth::login($result['user']);
+        Auth::guard('web')->login($result['user']);
         $request->session()->regenerate();
 
         return response()->json([

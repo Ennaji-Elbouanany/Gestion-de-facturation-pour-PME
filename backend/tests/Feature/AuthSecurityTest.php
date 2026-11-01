@@ -11,6 +11,15 @@ class AuthSecurityTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_csrf_token_endpoint_returns_a_token(): void
+    {
+        $response = $this->getJson('/api/csrf-token');
+
+        $response->assertOk()
+            ->assertJsonStructure(['token']);
+        $this->assertNotEmpty($response->json('token'));
+    }
+
     public function test_registration_rejects_a_weak_password(): void
     {
         $response = $this->postJson('/api/register', [

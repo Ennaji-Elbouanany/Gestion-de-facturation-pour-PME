@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->post('/register', [AuthController::class, 'register']);
 Route::middleware(['web', 'throttle:login'])->post('/login', [AuthController::class, 'login']);
+Route::middleware('web')->get('/csrf-token', function (): \Illuminate\Http\JsonResponse {
+    return response()->json(['token' => csrf_token()]);
+});
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 

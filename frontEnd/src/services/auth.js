@@ -1,5 +1,6 @@
 const API_URL = import.meta.env.VITE_API_URL
 let csrfReady = false
+let csrfHeaderToken = ''
 
 export function csrfToken() {
   const cookie = document.cookie
@@ -12,7 +13,7 @@ export function csrfToken() {
 export async function ensureCsrfCookie() {
   if (csrfReady) return
 
-  const response = await fetch(`${API_URL}/sanctum/csrf-cookie`, {
+  const response = await fetch(`${API_URL}/api/csrf-token`, {
     credentials: 'include',
     headers: { Accept: 'application/json' },
   })
@@ -21,6 +22,13 @@ export async function ensureCsrfCookie() {
     throw new Error('Impossible de sécuriser la connexion.')
   }
 
+  const result = await response.json()
+
+  if (typeof result.token !== 'string' || !result.token) {
+    throw new Error('Impossible de sécuriser la connexion.')
+  }
+
+  csrfHeaderToken = result.token
   csrfReady = true
 }
 
@@ -66,7 +74,9 @@ export async function authRequest(path, options, fallbackError) {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        ...(csrfToken() ? { 'X-XSRF-TOKEN': csrfToken() } : {}),
+        ...(csrfHeaderToken || csrfToken()
+          ? { 'X-CSRF-TOKEN': csrfHeaderToken || csrfToken() }
+          : {}),
         ...options.headers,
       },
     })
@@ -75,6 +85,7 @@ export async function authRequest(path, options, fallbackError) {
 
     if (response.status === 419) {
       csrfReady = false
+      csrfHeaderToken = ''
       await ensureCsrfCookie()
       response = await request()
     }

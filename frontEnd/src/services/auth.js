@@ -38,6 +38,10 @@ function getReadableError(result, fallback) {
 
   if (validationMessage) return validationMessage
 
+  if (typeof result?.message === 'string' && result.message.trim()) {
+    return result.message
+  }
+
   const knownMessages = [
     'Adresse e-mail ou mot de passe incorrect.',
     'Le lien est invalide ou a expiré.',

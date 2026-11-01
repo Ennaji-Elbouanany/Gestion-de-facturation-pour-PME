@@ -150,7 +150,14 @@ class AuthController extends Controller
             return compact('company', 'user');
         });
 
-        $result['user']->sendEmailVerificationNotification();
+        try {
+            $result['user']->sendEmailVerificationNotification();
+        } catch (\Throwable $exception) {
+            Log::error('Échec de l’envoi de l’e-mail de vérification.', [
+                'exception' => $exception,
+            ]);
+        }
+
         Auth::login($result['user']);
         $request->session()->regenerate();
 

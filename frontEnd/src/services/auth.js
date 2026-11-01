@@ -60,7 +60,7 @@ export async function authRequest(path, options, fallbackError) {
       await ensureCsrfCookie()
     }
 
-    response = await fetch(`${API_URL}${path}`, {
+    const request = () => fetch(`${API_URL}${path}`, {
       ...options,
       credentials: 'include',
       headers: {
@@ -70,6 +70,15 @@ export async function authRequest(path, options, fallbackError) {
         ...options.headers,
       },
     })
+
+    response = await request()
+
+    if (response.status === 419) {
+      csrfReady = false
+      await ensureCsrfCookie()
+      response = await request()
+    }
+
     const responseText = await response.text()
 
     if (responseText.trim()) {

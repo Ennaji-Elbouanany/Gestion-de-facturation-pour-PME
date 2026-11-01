@@ -18,12 +18,21 @@ return [
     |
     */
 
-    'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
-        '%s%s',
-        'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
-        Sanctum::currentApplicationUrlWithPort(),
-        // Sanctum::currentRequestHost(),
-    ))),
+    'stateful' => array_values(array_filter(array_unique(array_merge(
+        array_map('trim', explode(',', (string) env('SANCTUM_STATEFUL_DOMAINS', ''))),
+        [
+            'localhost',
+            'localhost:3000',
+            '127.0.0.1',
+            '127.0.0.1:8000',
+            '::1',
+            trim(Sanctum::currentApplicationUrlWithPort(), ', '),
+            parse_url((string) env('FRONTEND_URL', ''), PHP_URL_HOST)
+                . (parse_url((string) env('FRONTEND_URL', ''), PHP_URL_PORT)
+                    ? ':'.parse_url((string) env('FRONTEND_URL', ''), PHP_URL_PORT)
+                    : ''),
+        ],
+    )))),
 
     /*
     |--------------------------------------------------------------------------

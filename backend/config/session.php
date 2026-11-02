@@ -129,7 +129,7 @@ return [
 
     'cookie' => env(
         'SESSION_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')).'-session'
+        Str::slug((string) env('APP_NAME', 'laravel')) . '-session'
     ),
 
     /*
@@ -201,7 +201,7 @@ return [
 
     'same_site' => env('APP_ENV', 'production') === 'production'
         ? 'none'
-        : env('SESSION_SAME_SITE', 'lax'),
+        : env('SESSION_SAME_SITE', 'none'),
 
     /*
     |--------------------------------------------------------------------------

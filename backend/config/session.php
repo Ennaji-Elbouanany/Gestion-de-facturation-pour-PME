@@ -199,7 +199,10 @@ return [
     |
     */
 
-    'same_site' => env('SESSION_SAME_SITE', 'lax'),
+    'same_site' => env(
+        'SESSION_SAME_SITE',
+        env('APP_ENV', 'production') === 'production' ? 'none' : 'lax'
+    ),
 
     /*
     |--------------------------------------------------------------------------

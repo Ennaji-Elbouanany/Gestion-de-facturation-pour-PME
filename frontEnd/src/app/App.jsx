@@ -16,7 +16,7 @@ function pageForPath(path) {
   if (normalizedPath === '/') return 'landing'
   if (normalizedPath === '/login') return 'login'
   if (normalizedPath === '/register') return 'register'
-  if (protectedPaths.has(normalizedPath)) return 'auth-check'
+  if (protectedPaths.has(normalizedPath)) return hasAccessToken() ? 'auth-check' : 'login'
   return localStorage.getItem('auth_page') || 'register'
 }
 
@@ -64,11 +64,6 @@ function App() {
 
   useEffect(() => {
     if (initialPage !== 'auth-check') return undefined
-
-    if (!hasAccessToken()) {
-      setPage('login')
-      return undefined
-    }
 
     authRequest('/api/user', undefined, 'login')
       .then(() => {

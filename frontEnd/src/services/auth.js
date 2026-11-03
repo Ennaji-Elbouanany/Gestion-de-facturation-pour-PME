@@ -1,35 +1,12 @@
 const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
-let csrfReady = false
-let csrfHeaderToken = ''
+const TOKEN_KEY = 'ffactura_access_token'
 
-export function csrfToken() {
-  const cookie = document.cookie
-    .split('; ')
-    .find((value) => value.startsWith('XSRF-TOKEN='))
-
-  return cookie ? decodeURIComponent(cookie.substring('XSRF-TOKEN='.length)) : ''
+export function hasAccessToken() {
+  return Boolean(sessionStorage.getItem(TOKEN_KEY))
 }
 
-export async function ensureCsrfCookie() {
-  if (csrfReady) return
-
-  const response = await fetch(`${API_URL}/api/csrf-token`, {
-    credentials: 'include',
-    headers: { Accept: 'application/json' },
-  })
-
-  if (!response.ok) {
-    throw new Error('Impossible de sécuriser la connexion.')
-  }
-
-  const result = await response.json()
-
-  if (typeof result.token !== 'string' || !result.token) {
-    throw new Error('Impossible de sécuriser la connexion.')
-  }
-
-  csrfHeaderToken = result.token
-  csrfReady = true
+export function clearAccessToken() {
+  sessionStorage.removeItem(TOKEN_KEY)
 }
 
 function getValidationMessage(errors) {
@@ -45,81 +22,67 @@ function getReadableError(result, fallback) {
   const validationMessage = getValidationMessage(result?.errors)
 
   if (validationMessage) return validationMessage
-
   if (typeof result?.message === 'string' && result.message.trim()) {
     return result.message
   }
 
-  const knownMessages = [
-    'Adresse e-mail ou mot de passe incorrect.',
-    'Le lien est invalide ou a expiré.',
-    'Impossible de créer le compte.',
-  ]
-
-  return knownMessages.includes(result?.message) ? result.message : fallback
+  return fallback
 }
 
 export async function authRequest(path, options = {}, fallbackError = 'Une erreur est survenue.') {
-  let response
-  let result = {}
-
-  try {
-    if (options?.method && options.method !== 'GET') {
-      await ensureCsrfCookie()
-    }
-
-    const request = () => fetch(`${API_URL}${path}`, {
-      ...options,
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        ...(csrfHeaderToken || csrfToken()
-          ? { 'X-CSRF-TOKEN': csrfHeaderToken || csrfToken() }
-          : {}),
-        ...(options.headers || {}),
-      },
-    })
-
-    response = await request()
-
-    if (response.status === 419) {
-      csrfReady = false
-      csrfHeaderToken = ''
-      await ensureCsrfCookie()
-      response = await request()
-    }
-
-    const responseText = await response.text()
-
-    if (responseText.trim()) {
-      try {
-        result = JSON.parse(responseText)
-      } catch {
-        throw new Error(fallbackError)
-      }
-    }
-  } catch (error) {
-    // Preserve actionable errors from the CSRF bootstrap request.
-    if (error instanceof Error && error.message === 'Impossible de sécuriser la connexion.') {
-      throw error
-    }
-    throw new Error(fallbackError)
+  const publicPath = ['/api/login', '/api/register', '/api/forgot-password', '/api/reset-password'].includes(path)
+  const token = publicPath ? null : sessionStorage.getItem(TOKEN_KEY)
+  const headers = {
+    Accept: 'application/json',
+    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
   }
 
-  if (response.status === 419) {
-    throw new Error('La session a expiré ou les cookies sont bloqués. Vérifiez la configuration du navigateur et réessayez.')
+  // Authentication must never silently fall back to cookies or CSRF tokens.
+  // A token obtained from login/register is reused for all protected endpoints.
+  let response
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      credentials: 'omit',
+      headers,
+    })
+  } catch {
+    throw new Error('Connexion au serveur impossible. Réessayez.')
+  }
+
+  let result = {}
+  const responseText = await response.text()
+
+  if (responseText.trim()) {
+    try {
+      result = JSON.parse(responseText)
+    } catch {
+      throw new Error(fallbackError)
+    }
+  }
+
+  if (response.status === 401 && token && !publicPath) {
+    clearAccessToken()
+    window.dispatchEvent(new Event('ffactura:unauthorized'))
+    throw new Error('Votre session a expiré. Veuillez vous reconnecter.')
   }
 
   if (!response.ok) {
     throw new Error(getReadableError(result, fallbackError))
   }
 
-  // Login, registration, and logout regenerate or invalidate the Laravel
-  // session and therefore may change the associated CSRF token.
-  if (['/api/login', '/api/register', '/api/logout'].includes(path)) {
-    csrfReady = false
-    csrfHeaderToken = ''
+  if (path === '/api/register' || path === '/api/login') {
+    if (typeof result.token !== 'string' || !result.token) {
+      throw new Error('Le serveur n’a pas retourné de jeton de connexion.')
+    }
+
+    sessionStorage.setItem(TOKEN_KEY, result.token)
+  }
+
+  if (path === '/api/logout') {
+    clearAccessToken()
   }
 
   return result

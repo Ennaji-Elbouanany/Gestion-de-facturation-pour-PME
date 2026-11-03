@@ -12,17 +12,14 @@ use App\Http\Controllers\SettingsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('web')->post('/register', [AuthController::class, 'register']);
-Route::middleware(['web', 'throttle:login'])->post('/login', [AuthController::class, 'login']);
-Route::middleware('web')->get('/csrf-token', function (): \Illuminate\Http\JsonResponse {
-    return response()->json(['token' => csrf_token()]);
-});
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+Route::middleware('throttle:login')->post('/register', [AuthController::class, 'register']);
+Route::middleware('throttle:login')->post('/login', [AuthController::class, 'login']);
+Route::middleware('throttle:login')->post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::middleware('throttle:login')->post('/reset-password', [AuthController::class, 'resetPassword']);
 
-Route::middleware(['web', 'auth:sanctum'])->post('/logout', [AuthController::class, 'logout']);
+Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
-Route::middleware(['web', 'auth:sanctum'])->group(function (): void {
+Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
     Route::apiResource('clients', ClientController::class);
     Route::apiResource('products', ProductController::class);
@@ -46,4 +43,4 @@ Route::middleware(['web', 'auth:sanctum'])->group(function (): void {
 
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware(['web', 'auth:sanctum']);
+})->middleware('auth:sanctum');

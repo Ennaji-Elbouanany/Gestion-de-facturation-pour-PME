@@ -1,40 +1,34 @@
 # React + Vite
 
-## CSRF / Laravel Sanctum deployment
+## API authentication (Sanctum bearer tokens)
 
-Authentication uses Laravel's `web` session and CSRF protection, not bearer tokens.
-`VITE_API_URL` is the API origin; leave it empty when the frontend and API
-are served from the **same origin** (preferred).
+FFactura uses **stateless bearer tokens** for its cross-origin Render deployment.
+Login and registration respond with a token (12-hour expiry). The React client
+keeps it in `sessionStorage` for the lifetime of the browser tab and sends
+`Authorization: Bearer <token>` with every protected API request.
 
-For a same-site setup on subdomains of a domain you control:
+The backend uses `auth:sanctum` to validate tokens, including for logout,
+which revokes the current token. API requests no longer depend on Laravel's
+`web` session, CSRF bootstrap, `SameSite`, or third-party cookies.
+Password reset invalidates existing access tokens.
 
-- Configure Laravel `APP_URL=https://api.example.com` and
-  `FRONTEND_URL=https://app.example.com`.
-- Configure `SANCTUM_STATEFUL_DOMAINS=app.example.com`,
-  `SESSION_DOMAIN=.example.com`, `SESSION_SECURE_COOKIE=true`, and
-  `SESSION_SAME_SITE=lax`.
-- Keep `config/cors.php` credential support enabled and ensure
-  `FRONTEND_URL` matches the frontend origin exactly (scheme and host).
-- Ensure the server has persistent `SESSION_DRIVER=database` storage
-  (migrated sessions table and a stable APP_KEY).
-- Deploy the backend with refreshed config cache, rebuild the frontend,
-  and test the request sequence in browser Network tools.
+Deployment checklist:
+- Backend: keep a persistent database and run migrations (the
+  `personal_access_tokens` table is already included in this repository).
+- Frontend: set `VITE_API_URL` to the backend origin at build time.
+- Backend: `FRONTEND_URL` must match the deployed frontend origin for CORS.
+- Deploy the backend first; rebuild and deploy the frontend second.
+- Clear old browser cookies for the API and sign in again to obtain a bearer
+  token. Previously created users can sign in; no need to register again.
+- Check that `GET /api/user`, `GET /api/dashboard/summary` and
+  `GET /api/clients` return 200 when `Authorization` is present; a missing
+  or revoked token must receive 401.
+- Never paste access tokens into a support ticket, log, or screenshot.
+  `sessionStorage` avoids persisting tokens after the tab is closed but
+  cannot protect against XSS. Strengthen CSP and dependency hygiene.
 
-**Important:** A React site on `*.vercel.app` and Laravel on
-`*.onrender.com` are different *sites*. A CSRF token delivered via
-`/api/csrf-token` cannot overcome a browser blocking cross-site session
-cookies. Even with `SESSION_SAME_SITE=none` and
-`SESSION_SECURE_COOKIE=true`, third-party cookies may be blocked.
-Use a common registrable domain or a properly configured same-origin
-reverse proxy; do not disable CSRF protection to hide the 419 error.
-
-Diagnostics: GET `/api/csrf-token` must set the Laravel session cookie;
-POST `/api/register` must send back the same cookie, and its
-`X-CSRF-TOKEN` header must match that session. If the cookie does
-not return, inspect SameSite, Secure, cookie blocking, CORS, and any
-change of session storage between requests. Never expose live session
-cookies, CSRF tokens, or application secrets in tickets.
-
+Run `php artisan test --filter=AuthSecurityTest` from `backend`,
+`npm run lint` and `npm run build` from `frontEnd` before production release.
 
 ## Render SPA routing
 
@@ -65,18 +59,3 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-
-## Custom Sanctum SameSite middleware
-
-The application's `backend/app/Http/Middleware/EnsureFrontendRequestsAreStateful.php`
-extends the Sanctum middleware to preserve `config('session.same_site')`
-instead of forcing `lax`. It is registered in `backend/bootstrap/app.php`
-as a replacement for the API group's original Sanctum middleware.
-Do not edit Composer's `vendor/` files.
-
-Run `php artisan test --filter=StatefulSessionCookieTest` and inspect
-`Set-Cookie` for `/api/csrf-token` after deploying. Setting
-`SESSION_SAME_SITE=none` and `SESSION_SECURE_COOKIE=true` allows
-cross-site cookie *eligibility*, but does not override browser restrictions
-on third-party cookies. The preferred production solution is to serve
-frontend and backend on the same site (or origin).

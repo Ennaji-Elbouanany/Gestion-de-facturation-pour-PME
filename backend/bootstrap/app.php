@@ -1,10 +1,8 @@
 <?php
 
-use App\Http\Middleware\EnsureFrontendRequestsAreStateful as AppStatefulMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful as SanctumStatefulMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,10 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->statefulApi();
-        $middleware->api(replace: [
-            SanctumStatefulMiddleware::class => AppStatefulMiddleware::class,
-        ]);
+        // Register Laravel's default web and stateless API middleware groups.
+        // Do not call statefulApi(): bearer tokens authenticate API requests.
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

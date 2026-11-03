@@ -6,7 +6,7 @@ import ResetPassword from '../pages/auth/ResetPassword'
 import Dashboard from '../pages/dashboard/Dashboard'
 import Landing from '../pages/auth/Landing'
 import '../styles/App.css'
-import { authRequest } from '../services/auth'
+import { authRequest, clearAccessToken, hasAccessToken } from '../services/auth'
 
 const protectedPaths = new Set(['/dashboard', '/payments', '/invoices', '/clients', '/products', '/quotes', '/settings'])
 
@@ -16,7 +16,7 @@ function pageForPath(path) {
   if (normalizedPath === '/') return 'landing'
   if (normalizedPath === '/login') return 'login'
   if (normalizedPath === '/register') return 'register'
-  if (protectedPaths.has(normalizedPath)) return 'auth-check'
+  if (protectedPaths.has(normalizedPath)) return hasAccessToken() ? 'auth-check' : 'login'
   return localStorage.getItem('auth_page') || 'register'
 }
 
@@ -42,9 +42,24 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
-    authRequest('/api/user', undefined, 'Unauthenticated.')
+    if (!hasAccessToken()) return
+
+    authRequest('/api/user')
       .then(() => setIsAuthenticated(true))
       .catch(() => setIsAuthenticated(false))
+  }, [])
+
+  useEffect(() => {
+    function handleUnauthorized() {
+      clearAccessToken()
+      setIsAuthenticated(false)
+      localStorage.setItem('auth_page', 'login')
+      window.history.replaceState({}, '', '/login')
+      setPage('login')
+    }
+
+    window.addEventListener('ffactura:unauthorized', handleUnauthorized)
+    return () => window.removeEventListener('ffactura:unauthorized', handleUnauthorized)
   }, [])
 
   useEffect(() => {
@@ -88,10 +103,25 @@ function App() {
     navigate('register', '/register')
   }
 
-  function showDashboard() {
-    setIsAuthenticated(true)
-    localStorage.setItem('auth_page', 'dashboard')
-    navigate('dashboard', '/dashboard')
+  async function showDashboard() {
+    if (!hasAccessToken()) {
+      showLogin()
+      return
+    }
+
+    try {
+      const user = await authRequest('/api/user')
+      if (!user?.id) throw new Error('Session non valide')
+
+      setIsAuthenticated(true)
+      localStorage.setItem('auth_page', 'dashboard')
+      setDashboardPath('/dashboard')
+      navigate('dashboard', '/dashboard')
+    } catch {
+      clearAccessToken()
+      setIsAuthenticated(false)
+      showLogin()
+    }
   }
 
   function navigateDashboard(section) {
@@ -120,6 +150,7 @@ function App() {
     authRequest('/api/logout', { method: 'POST' }, 'Déconnexion impossible.')
       .catch(() => undefined)
       .finally(() => {
+        clearAccessToken()
         setIsAuthenticated(false)
         showLogin()
       })

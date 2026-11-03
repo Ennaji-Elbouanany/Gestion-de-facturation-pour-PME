@@ -4,37 +4,25 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class AuthSecurityTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_csrf_token_endpoint_returns_a_token(): void
-    {
-        $response = $this->getJson('/api/csrf-token');
-
-        $response->assertOk()
-            ->assertJsonStructure(['token']);
-        $this->assertNotEmpty($response->json('token'));
-    }
-
     public function test_registration_rejects_a_weak_password(): void
     {
-        $response = $this->postJson('/api/register', [
+        $this->postJson('/api/register', [
             'name' => 'Test',
             'email' => 'TEST@example.com',
             'company_name' => 'Test PME',
             'password' => 'azerty',
             'password_confirmation' => 'azerty',
             'role' => 'admin',
-        ]);
-
-        $response->assertStatus(422)->assertJsonValidationErrors('password');
+        ])->assertStatus(422)->assertJsonValidationErrors('password');
     }
 
-    public function test_registration_normalizes_email(): void
+    public function test_registration_normalizes_email_and_returns_bearer_token(): void
     {
         $response = $this->postJson('/api/register', [
             'name' => 'Test',
@@ -45,8 +33,17 @@ class AuthSecurityTest extends TestCase
             'role' => 'admin',
         ]);
 
-        $response->assertCreated();
-        $this->assertSame('test@example.com', $response->json('user.email'));
+        $response->assertCreated()->assertJsonPath('user.email', 'test@example.com');
+        $this->assertNotEmpty($response->json('token'));
+
+        $this->withToken($response->json('token'))
+            ->getJson('/api/user')
+            ->assertOk()
+            ->assertJsonPath('email', 'test@example.com');
+
+        $this->withToken($response->json('token'))
+            ->getJson('/api/dashboard/summary')
+            ->assertOk();
     }
 
     public function test_login_is_rate_limited(): void
@@ -63,7 +60,7 @@ class AuthSecurityTest extends TestCase
         $this->postJson('/api/login', $payload)->assertStatus(429);
     }
 
-    public function test_login_creates_a_session_without_returning_a_token(): void
+    public function test_login_returns_token_and_allows_protected_endpoints(): void
     {
         $user = User::factory()->create([
             'email' => 'login@example.com',
@@ -75,28 +72,41 @@ class AuthSecurityTest extends TestCase
             'password' => 'Maison!Bleue2026',
         ]);
 
-        $response->assertOk()
-            ->assertJsonMissingPath('token')
-            ->assertJsonPath('user.id', $user->id);
+        $response->assertOk()->assertJsonPath('user.id', $user->id);
+        $this->assertNotEmpty($response->json('token'));
 
-        $this->assertAuthenticatedAs($user);
-        $this->getJson('/api/user')->assertOk()->assertJsonPath('id', $user->id);
+        $this->withToken($response->json('token'))
+            ->getJson('/api/user')
+            ->assertOk()
+            ->assertJsonPath('id', $user->id);
+
+        $this->withToken($response->json('token'))
+            ->getJson('/api/clients')
+            ->assertOk();
     }
 
-    public function test_logout_invalidates_the_session(): void
+    public function test_protected_api_rejects_missing_or_invalid_token(): void
+    {
+        $this->getJson('/api/user')->assertUnauthorized();
+        $this->withToken('invalid-token')->getJson('/api/dashboard/summary')->assertUnauthorized();
+    }
+
+    public function test_logout_revokes_the_current_access_token(): void
     {
         $user = User::factory()->create([
             'email' => 'logout@example.com',
             'password' => bcrypt('Maison!Bleue2026'),
         ]);
 
-        $this->postJson('/api/login', [
+        $response = $this->postJson('/api/login', [
             'email' => $user->email,
             'password' => 'Maison!Bleue2026',
         ])->assertOk();
-        $this->postJson('/api/logout')
-            ->assertOk();
 
-        $this->assertNull(session(Auth::guard('web')->getName()));
+        $token = $response->json('token');
+
+        $this->withToken($token)->postJson('/api/logout')->assertOk();
+
+        $this->withToken($token)->getJson('/api/user')->assertUnauthorized();
     }
 }

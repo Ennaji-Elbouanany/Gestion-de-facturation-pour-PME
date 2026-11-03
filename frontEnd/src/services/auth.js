@@ -30,7 +30,8 @@ function getReadableError(result, fallback) {
 }
 
 export async function authRequest(path, options = {}, fallbackError = 'Une erreur est survenue.') {
-  const token = sessionStorage.getItem(TOKEN_KEY)
+  const publicPath = ['/api/login', '/api/register', '/api/forgot-password', '/api/reset-password'].includes(path)
+  const token = publicPath ? null : sessionStorage.getItem(TOKEN_KEY)
   const headers = {
     Accept: 'application/json',
     ...(options.body ? { 'Content-Type': 'application/json' } : {}),
@@ -62,7 +63,7 @@ export async function authRequest(path, options = {}, fallbackError = 'Une erreu
     }
   }
 
-  if (response.status === 401 && token) {
+  if (response.status === 401 && token && !publicPath) {
     clearAccessToken()
     window.dispatchEvent(new Event('ffactura:unauthorized'))
     throw new Error('Votre session a expiré. Veuillez vous reconnecter.')

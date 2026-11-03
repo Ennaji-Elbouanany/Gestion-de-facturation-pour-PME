@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -62,7 +63,9 @@ class AuthSecurityTest extends TestCase
 
     public function test_login_returns_token_and_allows_protected_endpoints(): void
     {
+        $company = Company::create(['name' => 'Login Company', 'email' => 'company@example.com']);
         $user = User::factory()->create([
+            'company_id' => $company->id,
             'email' => 'login@example.com',
             'password' => bcrypt('Maison!Bleue2026'),
         ]);

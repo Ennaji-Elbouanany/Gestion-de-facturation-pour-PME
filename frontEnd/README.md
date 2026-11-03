@@ -65,3 +65,18 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Custom Sanctum SameSite middleware
+
+The application's `backend/app/Http/Middleware/EnsureFrontendRequestsAreStateful.php`
+extends the Sanctum middleware to preserve `config('session.same_site')`
+instead of forcing `lax`. It is registered in `backend/bootstrap/app.php`
+as a replacement for the API group's original Sanctum middleware.
+Do not edit Composer's `vendor/` files.
+
+Run `php artisan test --filter=StatefulSessionCookieTest` and inspect
+`Set-Cookie` for `/api/csrf-token` after deploying. Setting
+`SESSION_SAME_SITE=none` and `SESSION_SECURE_COOKIE=true` allows
+cross-site cookie *eligibility*, but does not override browser restrictions
+on third-party cookies. The preferred production solution is to serve
+frontend and backend on the same site (or origin).

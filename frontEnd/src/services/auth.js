@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 let csrfReady = false
 let csrfHeaderToken = ''
 
@@ -59,7 +59,7 @@ function getReadableError(result, fallback) {
   return knownMessages.includes(result?.message) ? result.message : fallback
 }
 
-export async function authRequest(path, options, fallbackError) {
+export async function authRequest(path, options = {}, fallbackError = 'Une erreur est survenue.') {
   let response
   let result = {}
 
@@ -77,7 +77,7 @@ export async function authRequest(path, options, fallbackError) {
         ...(csrfHeaderToken || csrfToken()
           ? { 'X-CSRF-TOKEN': csrfHeaderToken || csrfToken() }
           : {}),
-        ...options.headers,
+        ...(options.headers || {}),
       },
     })
 
@@ -99,12 +99,27 @@ export async function authRequest(path, options, fallbackError) {
         throw new Error(fallbackError)
       }
     }
-  } catch {
+  } catch (error) {
+    // Preserve actionable errors from the CSRF bootstrap request.
+    if (error instanceof Error && error.message === 'Impossible de sécuriser la connexion.') {
+      throw error
+    }
     throw new Error(fallbackError)
+  }
+
+  if (response.status === 419) {
+    throw new Error('La session a expiré ou les cookies sont bloqués. Vérifiez la configuration du navigateur et réessayez.')
   }
 
   if (!response.ok) {
     throw new Error(getReadableError(result, fallbackError))
+  }
+
+  // Login, registration, and logout regenerate or invalidate the Laravel
+  // session and therefore may change the associated CSRF token.
+  if (['/api/login', '/api/register', '/api/logout'].includes(path)) {
+    csrfReady = false
+    csrfHeaderToken = ''
   }
 
   return result

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
 class AuthSecurityTest extends TestCase
@@ -109,6 +110,12 @@ class AuthSecurityTest extends TestCase
         $token = $response->json('token');
 
         $this->withToken($token)->postJson('/api/logout')->assertOk();
+
+        // Confirm revocation in storage. A PHPUnit application instance keeps
+        // resolved auth guards between synthetic requests, unlike PHP workers
+        // handling independent real HTTP requests.
+        $this->assertNull(PersonalAccessToken::findToken($token));
+        app('auth')->forgetGuards();
 
         $this->withToken($token)->getJson('/api/user')->assertUnauthorized();
     }

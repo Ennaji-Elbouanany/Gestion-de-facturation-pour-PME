@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class InvoiceController extends Controller
 {
@@ -115,14 +116,16 @@ class InvoiceController extends Controller
 
     private function validateInvoice(Request $request, bool $partial = false): array
     {
+        $companyId = $request->user()->company_id;
+
         $rules = [
-            'client_id' => ['required', 'integer', 'exists:clients,id'],
+            'client_id' => ['required', 'integer', Rule::exists('clients', 'id')->where('company_id', $companyId)],
             'invoice_date' => ['required', 'date'],
             'due_date' => ['nullable', 'date', 'after_or_equal:invoice_date'],
             'status' => ['sometimes', 'string', 'in:draft,sent,paid,partial,overdue,cancelled'],
             'notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['nullable', 'integer', 'exists:products,id'],
+            'items.*.product_id' => ['nullable', 'integer', Rule::exists('products', 'id')->where('company_id', $companyId)],
             'items.*.description' => ['required', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],

@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class QuoteController extends Controller
 {
@@ -168,14 +169,16 @@ class QuoteController extends Controller
 
     private function validateQuote(Request $request, bool $partial = false): array
     {
+        $companyId = $request->user()->company_id;
+
         $rules = [
-            'client_id' => ['required', 'integer', 'exists:clients,id'],
+            'client_id' => ['required', 'integer', Rule::exists('clients', 'id')->where('company_id', $companyId)],
             'quote_date' => ['required', 'date'],
             'valid_until' => ['nullable', 'date', 'after_or_equal:quote_date'],
             'status' => ['sometimes', 'string', 'in:draft,sent,accepted,rejected,expired,converted'],
             'notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['nullable', 'integer', 'exists:products,id'],
+            'items.*.product_id' => ['nullable', 'integer', Rule::exists('products', 'id')->where('company_id', $companyId)],
             'items.*.description' => ['required', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],

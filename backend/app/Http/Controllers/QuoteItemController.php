@@ -6,6 +6,7 @@ use App\Models\Quote;
 use App\Models\QuoteItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class QuoteItemController extends Controller
 {
@@ -26,7 +27,7 @@ class QuoteItemController extends Controller
         $this->ensureQuoteBelongsToCompany($request, $quote);
 
         $data = $request->validate([
-            'product_id' => ['nullable', 'integer', 'exists:products,id'],
+            'product_id' => ['nullable', 'integer', Rule::exists('products', 'id')->where('company_id', $request->user()->company_id)],
             'description' => ['required', 'string', 'max:255'],
             'quantity' => ['required', 'numeric', 'min:0.01'],
             'unit_price' => ['required', 'numeric', 'min:0'],
@@ -63,7 +64,7 @@ class QuoteItemController extends Controller
         $this->ensureItemBelongsToQuote($request, $quote, $quoteItem);
 
         $data = $request->validate([
-            'product_id' => ['sometimes', 'nullable', 'integer', 'exists:products,id'],
+            'product_id' => ['sometimes', 'nullable', 'integer', Rule::exists('products', 'id')->where('company_id', $request->user()->company_id)],
             'description' => ['sometimes', 'required', 'string', 'max:255'],
             'quantity' => ['sometimes', 'required', 'numeric', 'min:0.01'],
             'unit_price' => ['sometimes', 'required', 'numeric', 'min:0'],

@@ -53,6 +53,12 @@ class Quote extends Model
         return $this->belongsTo(User::class);
     }
 
+    // Relation used by scoped route binding for the {quoteItem} parameter.
+    public function quoteItems(): HasMany
+    {
+        return $this->items();
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(QuoteItem::class);

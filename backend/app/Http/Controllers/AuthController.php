@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
@@ -95,26 +94,28 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (!Auth::guard('web')->attempt($credentials)) {
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return response()->json([
                 'message' => 'Adresse e-mail ou mot de passe incorrect.',
             ], 401);
         }
 
-        $request->session()->regenerate();
-        $user = Auth::guard('web')->user();
+        $accessToken = $user->createToken('ffactura-spa', ['*'], now()->addHours(12));
 
         return response()->json([
             'message' => 'Connexion réussie.',
             'user' => $user,
+            'token' => $accessToken->plainTextToken,
+            'token_type' => 'Bearer',
         ]);
     }
 
     public function logout(Request $request): JsonResponse
     {
-        Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        // Revoke only the bearer token used by the current device/tab.
+        $request->user()->currentAccessToken()?->delete();
 
         return response()->json([
             'message' => 'Déconnexion réussie.',
@@ -158,12 +159,13 @@ class AuthController extends Controller
             ]);
         }
 
-        Auth::guard('web')->login($result['user']);
-        $request->session()->regenerate();
+        $accessToken = $result['user']->createToken('ffactura-spa', ['*'], now()->addHours(12));
 
         return response()->json([
             'message' => 'Compte créé avec succès.',
             'user' => $result['user'],
+            'token' => $accessToken->plainTextToken,
+            'token_type' => 'Bearer',
         ], 201);
     }
 }

@@ -13,6 +13,7 @@ trait ArchivesDrafts
     private function changeDraftArchive(Request $request, Invoice|Quote $document, bool $archive): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $document);
+        $this->authorize($archive ? 'archive' : 'restore', $document);
         $document = DB::transaction(function () use ($document, $archive) {
             $locked = $document->newQuery()->whereKey($document->id)->lockForUpdate()->firstOrFail();
             abort_unless($locked->status === 'draft', 409, 'Seul un brouillon peut être archivé ou restauré.');

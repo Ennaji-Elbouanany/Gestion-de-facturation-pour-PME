@@ -156,7 +156,6 @@ class SettingsTest extends TestCase
             'company_name' => 'Ma PME',
             'password' => 'Secret1234! PME',
             'password_confirmation' => 'Secret1234! PME',
-            'role' => 'admin',
         ]);
 
         $response->assertStatus(201);

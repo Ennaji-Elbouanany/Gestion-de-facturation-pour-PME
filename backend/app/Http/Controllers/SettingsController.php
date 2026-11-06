@@ -12,6 +12,8 @@ class SettingsController extends Controller
 {
     public function show(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', \App\Models\Company::class);
+        $request->validate(['role' => ['prohibited'], 'company_id' => ['prohibited'], 'permissions' => ['prohibited']]);
         $user = $request->user();
 
         return response()->json([
@@ -22,6 +24,8 @@ class SettingsController extends Controller
 
     public function updateProfile(Request $request): JsonResponse
     {
+        $this->authorize('update', $request->user());
+        $request->validate(['role' => ['prohibited'], 'company_id' => ['prohibited'], 'permissions' => ['prohibited']]);
         $user = $request->user();
         $request->merge(['email' => strtolower(trim((string) $request->input('email')))]);
 
@@ -53,6 +57,9 @@ class SettingsController extends Controller
 
     public function updateCompany(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', \App\Models\Company::class);
+        $this->authorize('update', $request->user()->company);
+        $request->validate(['role' => ['prohibited'], 'company_id' => ['prohibited'], 'permissions' => ['prohibited']]);
         $company = $request->user()->company;
 
         $data = $request->validate([
@@ -76,6 +83,9 @@ class SettingsController extends Controller
 
     public function updateBilling(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', \App\Models\Company::class);
+        $this->authorize('updateBilling', $request->user()->company);
+        $request->validate(['role' => ['prohibited'], 'company_id' => ['prohibited'], 'permissions' => ['prohibited']]);
         $company = $request->user()->company;
 
         $data = $request->validate([
@@ -94,6 +104,9 @@ class SettingsController extends Controller
 
     public function updateDocuments(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', \App\Models\Company::class);
+        $this->authorize('updateDocuments', $request->user()->company);
+        $request->validate(['role' => ['prohibited'], 'company_id' => ['prohibited'], 'permissions' => ['prohibited']]);
         $company = $request->user()->company;
 
         $data = $request->validate([
@@ -112,6 +125,9 @@ class SettingsController extends Controller
 
     public function updateNotifications(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', \App\Models\Company::class);
+        $this->authorize('updateNotifications', $request->user()->company);
+        $request->validate(['role' => ['prohibited'], 'company_id' => ['prohibited'], 'permissions' => ['prohibited']]);
         $company = $request->user()->company;
 
         $data = $request->validate([
@@ -131,6 +147,8 @@ class SettingsController extends Controller
 
     public function updateSecurity(Request $request): JsonResponse
     {
+        $this->authorize('updateSecurity', $request->user());
+        $request->validate(['role' => ['prohibited'], 'company_id' => ['prohibited'], 'permissions' => ['prohibited']]);
         $user = $request->user();
 
         $data = $request->validate([

@@ -43,11 +43,9 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\CanRese
      * @var list<string>
      */
     protected $fillable = [
-        'company_id',
         'name',
         'email',
         'password',
-        'role',
     ];
 
     /**

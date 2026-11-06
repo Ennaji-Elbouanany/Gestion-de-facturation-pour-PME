@@ -47,5 +47,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 });
 
 Route::get('/user', function (Request $request) {
-    return $request->user();
+    $user = $request->user();
+
+    return response()->json([...$user->toArray(), 'permissions' => \App\Support\UserPermissions::for($user)]);
 })->middleware('auth:sanctum');

@@ -26,7 +26,7 @@ class FinancialDataRetentionTest extends TestCase
     {
         parent::setUp();
         $company = Company::create(['name' => 'Retention PME']);
-        $this->owner = User::factory()->create(['company_id' => $company->id]);
+        $this->owner = User::factory()->create(['role' => 'admin', 'company_id' => $company->id]);
         $this->actingAs($this->owner);
         $this->client = Client::create(['company_id' => $company->id, 'name' => 'Historical client']);
     }
@@ -177,7 +177,7 @@ class FinancialDataRetentionTest extends TestCase
         $payment = $this->payment($invoice);
         $this->client->delete();
         $company = Company::create(['name' => 'Foreign company']);
-        $this->actingAs(User::factory()->create(['company_id' => $company->id]));
+        $this->actingAs(User::factory()->create(['role' => 'admin', 'company_id' => $company->id]));
         $this->getJson('/api/clients?archived=1')->assertJsonPath('total', 0);
         $this->deleteJson('/api/clients/'.$this->client->id)->assertNotFound();
         $this->patchJson('/api/clients/'.$this->client->id.'/restore')->assertNotFound();

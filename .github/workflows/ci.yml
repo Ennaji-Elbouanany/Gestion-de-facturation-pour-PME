@@ -57,7 +57,7 @@ jobs:
         run: php artisan test
 
   backend-mysql:
-    name: Financial retention (MySQL 8)
+    name: Backend retention and RBAC (MySQL 8)
     runs-on: ubuntu-latest
     services:
       mysql:
@@ -100,8 +100,8 @@ jobs:
       - run: |
           cp .env.example .env
           php artisan key:generate --force
-      - name: Test retention and upgrades on MySQL
-        run: php artisan test --filter=Financial
+      - name: Test backend on MySQL
+        run: php artisan test
 
   frontend:
     name: Frontend React and Vite
@@ -124,8 +124,8 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Run frontend tests when available
-        run: npm test --if-present -- --run
+      - name: Run frontend permission tests
+        run: npm test
 
       - name: Run ESLint
         run: npm run lint

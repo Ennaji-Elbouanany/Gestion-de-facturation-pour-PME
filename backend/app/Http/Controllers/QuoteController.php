@@ -20,6 +20,7 @@ class QuoteController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Quote::class);
         $companyId = $request->user()->company_id;
         $quotes = CompanyCache::remember(
             CompanyCache::key($companyId, CompanyCache::QUOTES),
@@ -35,6 +36,7 @@ class QuoteController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', Quote::class);
         $data = $this->validateQuote($request);
 
         $quote = DB::transaction(function () use ($request, $data) {
@@ -62,6 +64,7 @@ class QuoteController extends Controller
     public function show(Request $request, Quote $quote): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $quote);
+        $this->authorize('view', $quote);
 
         return response()->json($quote->load(['client:id,name,email,phone,address,city,country,deleted_at', 'items']));
     }
@@ -69,6 +72,7 @@ class QuoteController extends Controller
     public function update(Request $request, Quote $quote): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $quote);
+        $this->authorize('update', $quote);
         abort_if($quote->archived_at !== null, 409, 'Restaurez le brouillon avant de le modifier.');
 
         $data = $this->validateQuote($request, true, $quote->client_id);
@@ -97,6 +101,7 @@ class QuoteController extends Controller
     public function destroy(Request $request, Quote $quote): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $quote);
+        $this->authorize('view', $quote);
 
         return response()->json(['message' => 'Ce document doit être conservé. Vous pouvez archiver un brouillon.'], 409);
     }
@@ -114,6 +119,10 @@ class QuoteController extends Controller
     public function updateStatus(Request $request, Quote $quote): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $quote);
+        $this->authorize('updateStatus', $quote);
+        if ($request->input('status') === 'converted' && $quote->status !== 'converted') {
+            $this->authorize('convert', $quote);
+        }
         abort_if($quote->archived_at !== null, 409, 'Restaurez le brouillon avant de le modifier.');
 
         $data = $request->validate([
@@ -129,6 +138,7 @@ class QuoteController extends Controller
     public function convertToInvoice(Request $request, Quote $quote): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $quote);
+        $this->authorize('convert', $quote);
         abort_if($quote->archived_at !== null, 409, 'Restaurez le brouillon avant de le modifier.');
 
         if ($quote->status === 'converted') {
@@ -182,6 +192,9 @@ class QuoteController extends Controller
     private function validateQuote(Request $request, bool $partial = false, ?int $existingClientId = null): array
     {
         $companyId = $request->user()->company_id;
+        if ($request->input('status') === 'converted' && $request->route('quote')?->status !== 'converted') {
+            $this->authorize('convert', $request->route('quote') ?? new Quote(['company_id' => $companyId]));
+        }
 
         $rules = [
             'client_id' => ['required', 'integer', Rule::exists('clients', 'id')->where(function ($query) use ($companyId, $existingClientId) {

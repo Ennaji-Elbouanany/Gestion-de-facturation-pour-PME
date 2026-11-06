@@ -112,3 +112,8 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 ## Conservation de l’historique — lot 1
 
 Voir [les règles de conservation, tests et procédure de sauvegarde avant migration](../docs/lot-1-conservation.md).
+
+
+## Permissions par entreprise — lot 2
+
+Voir [la matrice RBAC, les tests et les vérifications avant déploiement](../docs/lot-2-rbac.md). Audit des comptes en lecture seule : `php artisan rbac:audit-accounts`.

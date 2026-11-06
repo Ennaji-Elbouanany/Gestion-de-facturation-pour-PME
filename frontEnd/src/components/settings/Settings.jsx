@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { apiRequest } from '../../services/api'
+import { usePermissions } from '../../hooks/usePermissions'
 import './Settings.css'
 
 const sections = [
@@ -63,6 +64,7 @@ function pickNotifications(value) {
 }
 
 function Settings() {
+  const { can } = usePermissions()
   const [activeSection, setActiveSection] = useState('entreprise')
   const [user, setUser] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -179,12 +181,15 @@ function Settings() {
       <div className="settings-card">
         <div className="settings-card-heading"><div><h2>Profil</h2><p>Vos informations personnelles de connexion.</p></div></div>
         <form className="settings-form" onSubmit={saveProfile}>
+          {!can('profile.update') && <p role="status">Consultation uniquement : vous ne pouvez pas modifier ces paramètres.</p>}
+          <fieldset className="permission-fields" disabled={!can('profile.update')}>
           <div className="settings-form-grid">
             <label>Nom complet *<input name="name" value={profileForm.name} onChange={handleChange(setProfileForm)} required maxLength={255} /></label>
             <label>Adresse e-mail *<input name="email" type="email" value={profileForm.email} onChange={handleChange(setProfileForm)} required maxLength={255} /></label>
             <div className="settings-role-field"><span className="settings-role-label">Rôle</span><span className="settings-role-badge">{roleLabels[user?.role] || user?.role || '—'}</span></div>
           </div>
-          <div className="settings-form-actions"><button className="primary-button" type="submit" disabled={isSaving}>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</button></div>
+          {can('profile.update') && <div className="settings-form-actions"><button className="primary-button" type="submit" disabled={isSaving}>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</button></div>}
+                  </fieldset>
         </form>
       </div>
     )
@@ -195,6 +200,8 @@ function Settings() {
       <div className="settings-card">
         <div className="settings-card-heading"><div><h2>Informations de l’entreprise</h2><p>Ces informations apparaissent sur vos documents de facturation.</p></div></div>
         <form className="settings-form" onSubmit={saveCompany}>
+          {!can('settings.update') && <p role="status">Consultation uniquement : vous ne pouvez pas modifier ces paramètres.</p>}
+          <fieldset className="permission-fields" disabled={!can('settings.update')}>
           <div className="settings-form-grid">
             <label>Nom de l’entreprise *<input name="name" value={companyForm.name} onChange={handleChange(setCompanyForm)} required maxLength={255} /></label>
             <label>E-mail<input name="email" type="email" value={companyForm.email} onChange={handleChange(setCompanyForm)} maxLength={255} /></label>
@@ -205,7 +212,8 @@ function Settings() {
             <label>Ville<input name="city" value={companyForm.city} onChange={handleChange(setCompanyForm)} maxLength={100} /></label>
             <label>Pays<input name="country" value={companyForm.country} onChange={handleChange(setCompanyForm)} maxLength={100} /></label>
           </div>
-          <div className="settings-form-actions"><button className="primary-button" type="submit" disabled={isSaving}>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</button></div>
+          {can('settings.update') && <div className="settings-form-actions"><button className="primary-button" type="submit" disabled={isSaving}>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</button></div>}
+                  </fieldset>
         </form>
       </div>
     )
@@ -216,12 +224,15 @@ function Settings() {
       <div className="settings-card">
         <div className="settings-card-heading"><div><h2>Facturation</h2><p>Préférences par défaut appliquées à vos factures.</p></div></div>
         <form className="settings-form" onSubmit={saveBilling}>
+          {!can('settings.updateBilling') && <p role="status">Consultation uniquement : vous ne pouvez pas modifier ces paramètres.</p>}
+          <fieldset className="permission-fields" disabled={!can('settings.updateBilling')}>
           <div className="settings-form-grid">
             <label>Délai de paiement (en jours)<input name="payment_terms_days" type="number" min="0" max="365" value={billingForm.payment_terms_days} onChange={handleChange(setBillingForm)} /></label>
             <label>TVA par défaut (%)<input name="default_tax_rate" type="number" min="0" max="100" step="0.01" value={billingForm.default_tax_rate} onChange={handleChange(setBillingForm)} /></label>
             <label>Devise<select name="currency" value={billingForm.currency} onChange={handleChange(setBillingForm)}><option value="MAD">DH — Dirham marocain</option><option value="EUR">€ — Euro</option><option value="USD">$ — Dollar américain</option></select></label>
           </div>
-          <div className="settings-form-actions"><button className="primary-button" type="submit" disabled={isSaving}>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</button></div>
+          {can('settings.updateBilling') && <div className="settings-form-actions"><button className="primary-button" type="submit" disabled={isSaving}>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</button></div>}
+                  </fieldset>
         </form>
       </div>
     )
@@ -233,13 +244,16 @@ function Settings() {
       <div className="settings-card">
         <div className="settings-card-heading"><div><h2>Documents</h2><p>Personnalisez l’apparence de vos factures et devis.</p></div></div>
         <form className="settings-form" onSubmit={saveDocuments}>
+          {!can('settings.updateDocuments') && <p role="status">Consultation uniquement : vous ne pouvez pas modifier ces paramètres.</p>}
+          <fieldset className="permission-fields" disabled={!can('settings.updateDocuments')}>
           <div className="settings-form-grid">
             <label>Préfixe des factures<input name="invoice_prefix" value={documentsForm.invoice_prefix} onChange={handleChange(setDocumentsForm)} maxLength={20} placeholder="FAC-" /></label>
             <label>Logo (URL)<input name="logo" value={documentsForm.logo} onChange={handleChange(setDocumentsForm)} maxLength={255} placeholder="https://..." /></label>
             <label className="settings-field--wide">Pied de page des factures<textarea className="settings-input-textarea" name="invoice_footer" value={documentsForm.invoice_footer} onChange={handleChange(setDocumentsForm)} rows="3" placeholder="Merci de votre confiance. Paiement à 30 jours."></textarea></label>
             <div className="settings-document-preview">Aperçu du prochain numéro : <code>{previewNumber}</code></div>
           </div>
-          <div className="settings-form-actions"><button className="primary-button" type="submit" disabled={isSaving}>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</button></div>
+          {can('settings.updateDocuments') && <div className="settings-form-actions"><button className="primary-button" type="submit" disabled={isSaving}>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</button></div>}
+                  </fieldset>
         </form>
       </div>
     )
@@ -258,13 +272,13 @@ function Settings() {
         <div className="settings-notifications">
           {items.map((item) => (
             <label className="settings-switch" key={item.key}>
-              <input type="checkbox" checked={notificationsForm[item.key]} onChange={() => handleToggleNotification(item.key)} />
+              <input type="checkbox" disabled={!can('settings.updateNotifications')} checked={notificationsForm[item.key]} onChange={() => handleToggleNotification(item.key)} />
               <span className="settings-switch-track" aria-hidden="true"></span>
               <span className="settings-switch-text"><strong>{item.label}</strong><small>{item.hint}</small></span>
             </label>
           ))}
         </div>
-        <p className="settings-hint">Les modifications sont enregistrées automatiquement.</p>
+        <p className="settings-hint">{can('settings.updateNotifications') ? 'Les modifications sont enregistrées automatiquement.' : 'Consultation uniquement : les notifications concernent toute l’entreprise.'}</p>
       </div>
     )
   }
@@ -274,12 +288,15 @@ function Settings() {
       <div className="settings-card">
         <div className="settings-card-heading"><div><h2>Sécurité</h2><p>Modifiez le mot de passe de votre compte.</p></div></div>
         <form className="settings-form" onSubmit={saveSecurity}>
+          {!can('profile.updateSecurity') && <p role="status">Consultation uniquement : vous ne pouvez pas modifier ces paramètres.</p>}
+          <fieldset className="permission-fields" disabled={!can('profile.updateSecurity')}>
           <div className="settings-form-grid">
             <label className="settings-field--wide">Mot de passe actuel *<input name="current_password" type="password" value={securityForm.current_password} onChange={handleChange(setSecurityForm)} required autoComplete="current-password" /></label>
             <label>Nouveau mot de passe *<input name="password" type="password" value={securityForm.password} onChange={handleChange(setSecurityForm)} required minLength={12} autoComplete="new-password" /></label>
             <label>Confirmation du nouveau mot de passe *<input name="password_confirmation" type="password" value={securityForm.password_confirmation} onChange={handleChange(setSecurityForm)} required minLength={12} autoComplete="new-password" /></label>
           </div>
-          <div className="settings-form-actions"><button className="primary-button" type="submit" disabled={isSaving}>{isSaving ? 'Enregistrement...' : 'Mettre à jour le mot de passe'}</button></div>
+          {can('profile.updateSecurity') && <div className="settings-form-actions"><button className="primary-button" type="submit" disabled={isSaving}>{isSaving ? 'Enregistrement...' : 'Mettre à jour le mot de passe'}</button></div>}
+                  </fieldset>
         </form>
       </div>
     )

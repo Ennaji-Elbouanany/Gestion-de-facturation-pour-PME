@@ -24,7 +24,7 @@ class CompanyReferenceValidationTest extends TestCase
 
         $company = Company::create(['name' => 'Company A']);
         $other = Company::create(['name' => 'Company B']);
-        $this->actingAs(User::factory()->create(['company_id' => $company->id]));
+        $this->actingAs(User::factory()->create(['role' => 'admin', 'company_id' => $company->id]));
         $this->client = Client::create(['company_id' => $company->id, 'name' => 'Client A']);
         $this->foreignClient = Client::create(['company_id' => $other->id, 'name' => 'Client B']);
         $this->product = Product::create(['company_id' => $company->id, 'name' => 'Product A', 'unit_price' => 10]);

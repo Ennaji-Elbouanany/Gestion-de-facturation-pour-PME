@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { apiRequest } from '../../services/api'
+import { usePermissions } from '../../hooks/usePermissions'
 import './Products.css'
 
 const emptyForm = { name: '', description: '', unit_price: '', tax_rate: '' }
 
 function Products() {
+  const { can } = usePermissions()
   const [products, setProducts] = useState([])
   const [formData, setFormData] = useState(emptyForm)
   const [editingProduct, setEditingProduct] = useState(null)
@@ -110,7 +112,7 @@ function Products() {
     <section className="products-page">
       <div className="products-heading">
         <div><p className="dashboard-kicker">Catalogue</p><h1>Produits</h1><p className="products-subtitle">Gérez les produits et services de votre entreprise.</p></div>
-        <button className="primary-button" type="button" onClick={openCreateForm}><span aria-hidden="true">＋</span> Nouveau produit</button>
+        {can('products.create') && <button className="primary-button" type="button" onClick={openCreateForm}><span aria-hidden="true">＋</span> Nouveau produit</button>}
       </div>
 
       {message && <p className="products-message" role="alert">{message}</p>}
@@ -128,7 +130,7 @@ function Products() {
 
       <section className="products-panel">
         <div className="products-panel-heading"><div><h2>Liste des produits</h2><p>{products.length} produit{products.length !== 1 ? 's' : ''}</p></div><button className="refresh-button" type="button" onClick={loadProducts}>Actualiser</button></div>
-        {isLoading ? <p className="empty-state">Chargement des produits...</p> : products.length === 0 ? <p className="empty-state">Aucun produit pour le moment. Ajoutez votre premier produit.</p> : <div className="products-table"><div className="product-row product-row-head"><span>PRODUIT</span><span>DESCRIPTION</span><span>PRIX UNITAIRE</span><span>TVA</span><span>ACTIONS</span></div>{products.map((product) => <div className="product-row" key={product.id}><strong>{product.name}</strong><span>{product.description || '—'}</span><span>{formatPrice(product.unit_price)}</span><span>{product.tax_rate ? `${product.tax_rate} %` : '—'}</span><div className="product-actions"><button type="button" onClick={() => openEditForm(product)}>Modifier</button><button className="delete-button" type="button" onClick={() => handleDelete(product)}>Supprimer</button></div></div>)}</div>}
+        {isLoading ? <p className="empty-state">Chargement des produits...</p> : products.length === 0 ? <p className="empty-state">Aucun produit pour le moment. Ajoutez votre premier produit.</p> : <div className="products-table"><div className="product-row product-row-head"><span>PRODUIT</span><span>DESCRIPTION</span><span>PRIX UNITAIRE</span><span>TVA</span><span>ACTIONS</span></div>{products.map((product) => <div className="product-row" key={product.id}><strong>{product.name}</strong><span>{product.description || '—'}</span><span>{formatPrice(product.unit_price)}</span><span>{product.tax_rate ? `${product.tax_rate} %` : '—'}</span><div className="product-actions">{can('products.update') && <button type="button" onClick={() => openEditForm(product)}>Modifier</button>}{can('products.delete') && <button className="delete-button" type="button" onClick={() => handleDelete(product)}>Supprimer</button>}</div></div>)}</div>}
       </section>
     </section>
   )

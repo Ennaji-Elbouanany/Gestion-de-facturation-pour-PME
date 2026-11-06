@@ -133,7 +133,6 @@ class CacheIntegrationTest extends TestCase
             'company_name' => $companyName,
             'password' => 'Secret1234! PME',
             'password_confirmation' => 'Secret1234! PME',
-            'role' => 'admin',
         ]);
 
         $response->assertCreated();

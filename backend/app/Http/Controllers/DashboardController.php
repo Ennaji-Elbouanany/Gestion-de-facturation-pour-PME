@@ -15,6 +15,7 @@ class DashboardController extends Controller
 {
     public function summary(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', \App\Models\Company::class);
         $companyId = $request->user()->company_id;
 
         $summary = CompanyCache::remember(
@@ -32,8 +33,10 @@ class DashboardController extends Controller
             ]
         );
 
-        return response()->json([
-            ...$summary,
-        ]);
+        if (! $request->user()->can('viewFinancialStatistics', \App\Models\Company::class)) {
+            $summary = array_intersect_key($summary, array_flip(['clients_count', 'products_count', 'invoices_count', 'quotes_count']));
+        }
+
+        return response()->json($summary);
     }
 }

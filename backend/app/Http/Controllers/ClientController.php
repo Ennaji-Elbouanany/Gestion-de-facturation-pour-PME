@@ -11,6 +11,7 @@ class ClientController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Client::class);
         $companyId = $request->user()->company_id;
         $request->validate(['archived' => ['sometimes', 'boolean']]);
         $archived = $request->boolean('archived');
@@ -36,6 +37,7 @@ class ClientController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', Client::class);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255', 'unique:clients,email'],
@@ -59,6 +61,7 @@ class ClientController extends Controller
     public function show(Request $request, Client $client): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $client);
+        $this->authorize('view', $client);
 
         return response()->json($client);
     }
@@ -66,6 +69,7 @@ class ClientController extends Controller
     public function update(Request $request, Client $client): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $client);
+        $this->authorize('update', $client);
 
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
@@ -86,6 +90,7 @@ class ClientController extends Controller
     public function destroy(Request $request, Client $client): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $client);
+        $this->authorize('archive', $client);
         if (! $client->trashed()) {
             $client->delete();
         }
@@ -99,6 +104,7 @@ class ClientController extends Controller
     public function restore(Request $request, Client $client): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $client);
+        $this->authorize('restore', $client);
         if ($client->trashed()) {
             $client->restore();
         }

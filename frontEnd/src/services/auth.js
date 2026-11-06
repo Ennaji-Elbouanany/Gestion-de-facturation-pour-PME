@@ -1,4 +1,4 @@
-const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+const API_URL = (import.meta.env?.VITE_API_URL || '').replace(/\/$/, '')
 const TOKEN_KEY = 'ffactura_access_token'
 
 export function hasAccessToken() {
@@ -70,7 +70,12 @@ export async function authRequest(path, options = {}, fallbackError = 'Une erreu
   }
 
   if (!response.ok) {
-    throw new Error(getReadableError(result, fallbackError))
+    const error = new Error(response.status === 403
+      ? `Accès refusé : ${getReadableError(result, 'vous ne disposez pas des permissions nécessaires.')}`
+      : getReadableError(result, fallbackError))
+    error.status = response.status
+    error.errors = result?.errors || {}
+    throw error
   }
 
   if (path === '/api/register' || path === '/api/login') {

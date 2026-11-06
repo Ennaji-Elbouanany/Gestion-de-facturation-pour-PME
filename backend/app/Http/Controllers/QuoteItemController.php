@@ -13,6 +13,7 @@ class QuoteItemController extends Controller
     public function index(Request $request, Quote $quote): JsonResponse
     {
         $this->ensureQuoteBelongsToCompany($request, $quote);
+        $this->authorize('view', $quote);
 
         $items = $quote->items()
             ->with('product:id,name')
@@ -25,6 +26,7 @@ class QuoteItemController extends Controller
     public function store(Request $request, Quote $quote): JsonResponse
     {
         $this->ensureQuoteBelongsToCompany($request, $quote);
+        $this->authorize('update', $quote);
         abort_if($quote->archived_at !== null, 409, 'Restaurez le brouillon avant de modifier ses lignes.');
 
         $data = $request->validate([
@@ -56,6 +58,7 @@ class QuoteItemController extends Controller
     public function show(Request $request, Quote $quote, QuoteItem $quoteItem): JsonResponse
     {
         $this->ensureItemBelongsToQuote($request, $quote, $quoteItem);
+        $this->authorize('view', $quote);
 
         return response()->json($quoteItem->load('product:id,name'));
     }
@@ -63,6 +66,7 @@ class QuoteItemController extends Controller
     public function update(Request $request, Quote $quote, QuoteItem $quoteItem): JsonResponse
     {
         $this->ensureItemBelongsToQuote($request, $quote, $quoteItem);
+        $this->authorize('update', $quote);
         abort_if($quote->archived_at !== null, 409, 'Restaurez le brouillon avant de modifier ses lignes.');
 
         $data = $request->validate([
@@ -90,6 +94,7 @@ class QuoteItemController extends Controller
     public function destroy(Request $request, Quote $quote, QuoteItem $quoteItem): JsonResponse
     {
         $this->ensureItemBelongsToQuote($request, $quote, $quoteItem);
+        $this->authorize('update', $quote);
         abort_if($quote->archived_at !== null, 409, 'Restaurez le brouillon avant de modifier ses lignes.');
         $quoteItem->delete();
 

@@ -13,6 +13,7 @@ class PaymentController extends Controller
     public function index(Request $request, Invoice $invoice): JsonResponse
     {
         $this->ensureInvoiceBelongsToCompany($request, $invoice);
+        $this->authorize('viewAny', [Payment::class, $invoice]);
 
         $payments = $invoice->payments()
             ->latest()
@@ -26,6 +27,7 @@ class PaymentController extends Controller
      */
     public function all(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Payment::class);
         $payments = Payment::query()
             ->whereHas('invoice', static function ($query) use ($request) {
                 $query->where('company_id', $request->user()->company_id);
@@ -41,6 +43,7 @@ class PaymentController extends Controller
     public function store(Request $request, Invoice $invoice): JsonResponse
     {
         $this->ensureInvoiceBelongsToCompany($request, $invoice);
+        $this->authorize('create', [Payment::class, $invoice]);
         abort_if($invoice->archived_at !== null, 409, 'Restaurez le brouillon avant de gérer ses règlements.');
         abort_unless($invoice->status !== 'cancelled', 422, 'Impossible d’ajouter un paiement à une facture annulée.');
 
@@ -72,6 +75,7 @@ class PaymentController extends Controller
     public function show(Request $request, Invoice $invoice, Payment $payment): JsonResponse
     {
         $this->ensurePaymentBelongsToInvoice($request, $invoice, $payment);
+        $this->authorize('view', $payment);
 
         return response()->json($payment);
     }
@@ -79,6 +83,7 @@ class PaymentController extends Controller
     public function update(Request $request, Invoice $invoice, Payment $payment): JsonResponse
     {
         $this->ensurePaymentBelongsToInvoice($request, $invoice, $payment);
+        $this->authorize('update', $payment);
         abort_if($invoice->archived_at !== null, 409, 'Restaurez le brouillon avant de gérer ses règlements.');
 
         $data = $request->validate([
@@ -109,6 +114,7 @@ class PaymentController extends Controller
     public function destroy(Request $request, Invoice $invoice, Payment $payment): JsonResponse
     {
         $this->ensurePaymentBelongsToInvoice($request, $invoice, $payment);
+        $this->authorize('view', $payment);
 
         return response()->json(['message' => 'Un règlement enregistré doit être conservé et ne peut pas être supprimé.'], 409);
     }

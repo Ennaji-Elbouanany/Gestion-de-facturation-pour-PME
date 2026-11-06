@@ -131,7 +131,9 @@ class AuthController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'company_name' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string', PasswordRule::min(12)->mixedCase()->numbers()->symbols(), 'confirmed'],
-            'role' => ['required', 'string', 'in:employee,admin,comptable'],
+            'role' => ['prohibited'],
+            'company_id' => ['prohibited'],
+            'permissions' => ['prohibited'],
         ]);
 
         $result = DB::transaction(function () use ($data): array {
@@ -140,13 +142,14 @@ class AuthController extends Controller
                 'email' => $data['email'],
             ]);
 
-            $user = User::create([
+            $user = (new User)->forceFill([
                 'company_id' => $company->id,
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
-                'role' => $data['role'],
+                'role' => \App\Enums\UserRole::Admin->value,
             ]);
+            $user->save();
 
             return compact('company', 'user');
         });

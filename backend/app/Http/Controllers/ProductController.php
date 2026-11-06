@@ -11,6 +11,7 @@ class ProductController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Product::class);
         $companyId = $request->user()->company_id;
         $products = CompanyCache::remember(
             CompanyCache::key($companyId, CompanyCache::PRODUCTS),
@@ -23,6 +24,7 @@ class ProductController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', Product::class);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -43,6 +45,7 @@ class ProductController extends Controller
     public function show(Request $request, Product $product): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $product);
+        $this->authorize('view', $product);
 
         return response()->json($product);
     }
@@ -50,6 +53,7 @@ class ProductController extends Controller
     public function update(Request $request, Product $product): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $product);
+        $this->authorize('update', $product);
 
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
@@ -67,6 +71,7 @@ class ProductController extends Controller
     public function destroy(Request $request, Product $product): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $product);
+        $this->authorize('delete', $product);
         $product->delete();
         $this->forgetCompanyCaches($request->user()->company_id);
 

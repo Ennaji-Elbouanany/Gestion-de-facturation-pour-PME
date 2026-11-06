@@ -7,7 +7,7 @@ function RegisterForm({ onLoginClick, onBackToLanding, onRegistrationSuccess }) 
   const [formData, setFormData] = useState({
     name: '',
     company_name: '',
-    role: '',
+
     email: '',
     password: '',
     password_confirmation: '',
@@ -54,7 +54,7 @@ function RegisterForm({ onLoginClick, onBackToLanding, onRegistrationSuccess }) 
         body: JSON.stringify({
           name: formData.name,
           company_name: formData.company_name,
-          role: formData.role,
+
           email: formData.email,
           password: formData.password,
           password_confirmation: formData.password_confirmation,
@@ -69,7 +69,7 @@ function RegisterForm({ onLoginClick, onBackToLanding, onRegistrationSuccess }) 
       setFormData({
         name: '',
         company_name: '',
-        role: '',
+
         email: '',
         password: '',
         password_confirmation: '',
@@ -125,22 +125,7 @@ function RegisterForm({ onLoginClick, onBackToLanding, onRegistrationSuccess }) 
             required
           />
 
-          <label htmlFor="role">Rôle</label>
 
-          <select
-            id="role"
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            required
-          >
-            <option value="" disabled>
-              Sélectionnez un rôle
-            </option>
-            <option value="employee">Employee</option>
-            <option value="admin">Admin</option>
-            <option value="comptable">Comptable</option>
-          </select>
 
           <label htmlFor="email">Adresse e-mail</label>
 

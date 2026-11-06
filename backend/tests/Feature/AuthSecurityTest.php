@@ -20,7 +20,6 @@ class AuthSecurityTest extends TestCase
             'company_name' => 'Test PME',
             'password' => 'azerty',
             'password_confirmation' => 'azerty',
-            'role' => 'admin',
         ])->assertStatus(422)->assertJsonValidationErrors('password');
     }
 
@@ -32,7 +31,6 @@ class AuthSecurityTest extends TestCase
             'company_name' => 'Test PME',
             'password' => 'Maison!Bleue2026',
             'password_confirmation' => 'Maison!Bleue2026',
-            'role' => 'admin',
         ]);
 
         $response->assertCreated()->assertJsonPath('user.email', 'test@example.com');

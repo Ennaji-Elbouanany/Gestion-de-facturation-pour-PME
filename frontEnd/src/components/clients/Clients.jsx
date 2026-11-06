@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { apiRequest } from '../../services/api'
+import { usePermissions } from '../../hooks/usePermissions'
 import './Clients.css'
 
 const emptyForm = { name: '', email: '', phone: '', city: '', country: '' }
 
 function Clients() {
+  const { can } = usePermissions()
   const [clients, setClients] = useState([])
   const [formData, setFormData] = useState(emptyForm)
   const [editingClient, setEditingClient] = useState(null)
@@ -130,7 +132,7 @@ function Clients() {
     <section className="clients-page">
       <div className="clients-heading">
         <div><p className="dashboard-kicker">Carnet d’adresses</p><h1>Clients</h1><p className="clients-subtitle">Gérez les clients de votre entreprise.</p></div>
-        <button className="primary-button" type="button" onClick={openCreateForm}><span aria-hidden="true">＋</span> Nouveau client</button>
+        {can('clients.create') && <button className="primary-button" type="button" onClick={openCreateForm}><span aria-hidden="true">＋</span> Nouveau client</button>}
       </div>
 
       {message && <p className="clients-message" role="alert">{message}</p>}
@@ -150,7 +152,7 @@ function Clients() {
       <section className="clients-panel">
         <label><input type="checkbox" checked={showArchived} onChange={(event) => { closeForm(); setShowArchived(event.target.checked) }} /> Afficher les clients archivés</label>
         <div className="clients-panel-heading"><div><h2>{showArchived ? 'Clients archivés' : 'Clients actifs'}</h2><p>{pagination?.total ?? clients.length} client{(pagination?.total ?? clients.length) !== 1 ? 's' : ''}</p></div><button className="refresh-button" type="button" onClick={() => loadClients(pagination?.current_page || 1)}>Actualiser</button></div>
-        {isLoading ? <p className="empty-state">Chargement des clients...</p> : clients.length === 0 ? <p className="empty-state">Aucun client pour le moment. Ajoutez votre premier client.</p> : <div className="clients-table"><div className="client-row client-row-head"><span>CLIENT</span><span>E-MAIL</span><span>TÉLÉPHONE</span><span>VILLE</span><span>ACTIONS</span></div>{clients.map((client) => <div className="client-row" key={client.id}><strong>{client.name}</strong><span>{client.email || '—'}</span><span>{client.phone || '—'}</span><span>{client.city || '—'}</span><div className="client-actions">{showArchived ? <button type="button" disabled={isSubmitting} onClick={() => handleRestore(client)}>Restaurer</button> : <><button type="button" onClick={() => openEditForm(client)}>Modifier</button><button className="delete-button" type="button" disabled={isSubmitting} onClick={() => handleArchive(client)}>Archiver</button></>}</div></div>)}</div>}
+        {isLoading ? <p className="empty-state">Chargement des clients...</p> : clients.length === 0 ? <p className="empty-state">Aucun client pour le moment. Ajoutez votre premier client.</p> : <div className="clients-table"><div className="client-row client-row-head"><span>CLIENT</span><span>E-MAIL</span><span>TÉLÉPHONE</span><span>VILLE</span><span>ACTIONS</span></div>{clients.map((client) => <div className="client-row" key={client.id}><strong>{client.name}</strong><span>{client.email || '—'}</span><span>{client.phone || '—'}</span><span>{client.city || '—'}</span><div className="client-actions">{showArchived ? (can('clients.restore') && <button type="button" disabled={isSubmitting} onClick={() => handleRestore(client)}>Restaurer</button>) : <>{can('clients.update') && <button type="button" onClick={() => openEditForm(client)}>Modifier</button>}{can('clients.archive') && <button className="delete-button" type="button" disabled={isSubmitting} onClick={() => handleArchive(client)}>Archiver</button>}</>}</div></div>)}</div>}
         {pagination && pagination.last_page > 1 && <div className="clients-panel-heading"><button className="refresh-button" type="button" disabled={!pagination.prev_page_url} onClick={() => loadClients(pagination.current_page - 1)}>Précédent</button><span>Page {pagination.current_page} sur {pagination.last_page}</span><button className="refresh-button" type="button" disabled={!pagination.next_page_url} onClick={() => loadClients(pagination.current_page + 1)}>Suivant</button></div>}
       </section>
     </section>

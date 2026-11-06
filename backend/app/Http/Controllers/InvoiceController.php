@@ -19,6 +19,7 @@ class InvoiceController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Invoice::class);
         $companyId = $request->user()->company_id;
         $invoices = CompanyCache::remember(
             CompanyCache::key($companyId, CompanyCache::INVOICES),
@@ -34,6 +35,7 @@ class InvoiceController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', Invoice::class);
         $data = $this->validateInvoice($request);
 
         $invoice = DB::transaction(function () use ($request, $data) {
@@ -61,13 +63,20 @@ class InvoiceController extends Controller
     public function show(Request $request, Invoice $invoice): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $invoice);
+        $this->authorize('view', $invoice);
 
-        return response()->json($invoice->load(['client:id,name,email,phone,address,city,country,deleted_at', 'items', 'payments']));
+        $relations = ['client:id,name,email,phone,address,city,country,deleted_at', 'items'];
+        if ($request->user()->can('viewAny', \App\Models\Payment::class)) {
+            $relations[] = 'payments';
+        }
+
+        return response()->json($invoice->load($relations));
     }
 
     public function update(Request $request, Invoice $invoice): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $invoice);
+        $this->authorize('update', $invoice);
         abort_if($invoice->archived_at !== null, 409, 'Restaurez le brouillon avant de le modifier.');
 
         $data = $this->validateInvoice($request, true, $invoice->client_id);
@@ -96,6 +105,7 @@ class InvoiceController extends Controller
     public function destroy(Request $request, Invoice $invoice): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $invoice);
+        $this->authorize('view', $invoice);
 
         return response()->json(['message' => 'Ce document doit être conservé. Vous pouvez archiver un brouillon.'], 409);
     }
@@ -113,6 +123,7 @@ class InvoiceController extends Controller
     public function updateStatus(Request $request, Invoice $invoice): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $invoice);
+        $this->authorize('updateStatus', $invoice);
         abort_if($invoice->archived_at !== null, 409, 'Restaurez le brouillon avant de le modifier.');
 
         $data = $request->validate([
@@ -128,6 +139,9 @@ class InvoiceController extends Controller
     private function validateInvoice(Request $request, bool $partial = false, ?int $existingClientId = null): array
     {
         $companyId = $request->user()->company_id;
+        if ($request->exists('status') && $request->input('status') !== 'draft') {
+            $this->authorize('updateAny', Invoice::class);
+        }
 
         $rules = [
             'client_id' => ['required', 'integer', Rule::exists('clients', 'id')->where(function ($query) use ($companyId, $existingClientId) {

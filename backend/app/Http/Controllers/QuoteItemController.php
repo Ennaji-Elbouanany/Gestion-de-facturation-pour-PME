@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Quote;
 use App\Models\QuoteItem;
+use App\Services\MoneyCalculator;
+use App\Support\CompanyCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -32,9 +34,9 @@ class QuoteItemController extends Controller
         $data = $request->validate([
             'product_id' => ['nullable', 'integer', Rule::exists('products', 'id')->where('company_id', $request->user()->company_id)],
             'description' => ['required', 'string', 'max:255'],
-            'quantity' => ['required', 'numeric', 'min:0.01'],
-            'unit_price' => ['required', 'numeric', 'min:0'],
-            'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'quantity' => ['required', ...MoneyCalculator::rules(true)],
+            'unit_price' => ['required', ...MoneyCalculator::rules()],
+            'tax_rate' => ['nullable', ...MoneyCalculator::rules(), 'max:100'],
         ]);
 
         $totals = $this->calculateTotals($data);
@@ -72,9 +74,9 @@ class QuoteItemController extends Controller
         $data = $request->validate([
             'product_id' => ['sometimes', 'nullable', 'integer', Rule::exists('products', 'id')->where('company_id', $request->user()->company_id)],
             'description' => ['sometimes', 'required', 'string', 'max:255'],
-            'quantity' => ['sometimes', 'required', 'numeric', 'min:0.01'],
-            'unit_price' => ['sometimes', 'required', 'numeric', 'min:0'],
-            'tax_rate' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:100'],
+            'quantity' => ['sometimes', 'required', ...MoneyCalculator::rules(true)],
+            'unit_price' => ['sometimes', 'required', ...MoneyCalculator::rules()],
+            'tax_rate' => ['sometimes', 'nullable', ...MoneyCalculator::rules(), 'max:100'],
         ]);
 
         $merged = array_merge($quoteItem->only(['product_id', 'description', 'quantity', 'unit_price', 'tax_rate']), $data);
@@ -107,24 +109,15 @@ class QuoteItemController extends Controller
 
     private function calculateTotals(array $data): array
     {
-        $quantity = (float) ($data['quantity'] ?? 0);
-        $unitPrice = (float) ($data['unit_price'] ?? 0);
-        $taxRate = (float) ($data['tax_rate'] ?? 0);
-        $subtotal = round($quantity * $unitPrice, 2);
-        $total = round($subtotal + ($subtotal * $taxRate / 100), 2);
-
-        return ['subtotal' => $subtotal, 'total' => $total];
+        return MoneyCalculator::line($data);
     }
 
     private function recalculateQuoteTotals(Quote $quote): void
     {
         $items = $quote->items()->get();
 
-        $quote->update([
-            'subtotal' => round($items->sum(fn ($item) => (float) $item->subtotal), 2),
-            'tax_amount' => round($items->sum(fn ($item) => (float) $item->total - (float) $item->subtotal), 2),
-            'total_amount' => round($items->sum(fn ($item) => (float) $item->total), 2),
-        ]);
+        $quote->update(MoneyCalculator::totals($items->toArray(), $quote->discount_amount));
+        CompanyCache::forget($quote->company_id, CompanyCache::QUOTES);
     }
 
     private function ensureQuoteBelongsToCompany(Request $request, Quote $quote): void

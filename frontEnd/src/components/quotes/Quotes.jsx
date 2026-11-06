@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { documentTotals, lineTotals } from '../../services/money'
 import { apiRequest } from '../../services/api'
 import { usePermissions } from '../../hooks/usePermissions'
 import './Quotes.css'
@@ -165,29 +166,9 @@ function Quotes() {
     setFormData(emptyForm)
   }
 
-  function calculateItemSubtotal(item) {
-    const quantity = Number(item.quantity) || 0
-    const unitPrice = Number(item.unit_price) || 0
-    return quantity * unitPrice
-  }
-
-  function calculateItemTotal(item) {
-    const subtotal = calculateItemSubtotal(item)
-    const taxRate = Number(item.tax_rate) || 0
-    return subtotal + (subtotal * taxRate / 100)
-  }
-
-  function calculateSubtotal() {
-    return formData.items.reduce((sum, item) => sum + calculateItemSubtotal(item), 0)
-  }
-
-  function calculateTaxAmount() {
-    return formData.items.reduce((sum, item) => sum + (calculateItemTotal(item) - calculateItemSubtotal(item)), 0)
-  }
-
-  function calculateTotal() {
-    return formData.items.reduce((sum, item) => sum + calculateItemTotal(item), 0)
-  }
+  function calculateSubtotal() { return documentTotals(formData.items).subtotal }
+  function calculateTaxAmount() { return documentTotals(formData.items).tax }
+  function calculateTotal() { return documentTotals(formData.items).total }
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -401,7 +382,7 @@ function Quotes() {
                 <input name="quantity" type="number" step="0.01" min="0.01" value={item.quantity} onChange={(event) => handleItemChange(index, event)} required />
                 <input name="unit_price" type="number" step="0.01" min="0" value={item.unit_price} onChange={(event) => handleItemChange(index, event)} required />
                 <input name="tax_rate" type="number" step="0.01" min="0" max="100" value={item.tax_rate} onChange={(event) => handleItemChange(index, event)} />
-                <strong>{formatPrice(calculateItemTotal(item))}</strong>
+                <strong>{formatPrice(lineTotals(item).total)}</strong>
                 <button className="remove-item-button" type="button" onClick={() => removeItem(index)} aria-label="Supprimer la ligne">x</button>
               </div>
             ))}
@@ -432,7 +413,7 @@ function Quotes() {
               <input name="quantity" type="number" step="0.01" min="0.01" value={itemForm.quantity} onChange={handleItemFormChange} required />
               <input name="unit_price" type="number" step="0.01" min="0" value={itemForm.unit_price} onChange={handleItemFormChange} required />
               <input name="tax_rate" type="number" step="0.01" min="0" max="100" value={itemForm.tax_rate} onChange={handleItemFormChange} />
-              <strong>{formatPrice(calculateItemTotal(itemForm))}</strong>
+              <strong>{formatPrice(lineTotals(itemForm).total)}</strong>
               <span />
             </div>
           </div>

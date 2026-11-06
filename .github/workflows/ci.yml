@@ -57,7 +57,7 @@ jobs:
         run: php artisan test
 
   backend-mysql:
-    name: Backend retention and RBAC (MySQL 8)
+    name: Backend finance, concurrency and RBAC (MySQL 8)
     runs-on: ubuntu-latest
     services:
       mysql:

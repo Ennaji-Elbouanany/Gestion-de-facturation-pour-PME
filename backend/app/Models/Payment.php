@@ -3,14 +3,16 @@
 namespace App\Models;
 
 use App\Models\Concerns\PreventsPhysicalDeletion;
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Payment extends Model
 {
     use HasFactory, PreventsPhysicalDeletion;
+
+    protected $hidden = ['request_hash', 'idempotency_key'];
 
     protected $fillable = [
         'invoice_id',
@@ -24,9 +26,15 @@ class Payment extends Model
     protected function casts(): array
     {
         return [
+            'version' => 'integer',
             'amount' => 'decimal:2',
             'payment_date' => 'date',
         ];
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(PaymentRevision::class)->orderBy('id');
     }
 
     public function invoice(): BelongsTo

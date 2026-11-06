@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Quote;
 use App\Models\QuoteItem;
+use App\Services\MoneyCalculator;
 use App\Support\CompanyCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -209,16 +210,21 @@ class QuoteController extends Controller
             'valid_until' => ['nullable', 'date', 'after_or_equal:quote_date'],
             'status' => ['sometimes', 'string', 'in:draft,sent,accepted,rejected,expired,converted'],
             'notes' => ['nullable', 'string'],
-            'items' => ['required', 'array', 'min:1'],
+            'items' => ['required', 'array', 'min:1', 'max:200'],
             'items.*.product_id' => ['nullable', 'integer', Rule::exists('products', 'id')->where('company_id', $companyId)],
             'items.*.description' => ['required', 'string', 'max:255'],
-            'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
-            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
-            'items.*.tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'items.*.quantity' => ['required', ...MoneyCalculator::rules(true)],
+            'items.*.unit_price' => ['required', ...MoneyCalculator::rules()],
+            'items.*.tax_rate' => ['nullable', ...MoneyCalculator::rules(), 'max:100'],
         ];
 
         if ($partial) {
-            $rules = array_map(fn ($rule) => ['sometimes', ...(is_array($rule) ? $rule : [$rule])], $rules);
+            foreach ($rules as $field => &$rule) {
+                if (! str_starts_with($field, 'items.*.')) {
+                    $rule = ['sometimes', ...$rule];
+                }
+            }
+            unset($rule);
         }
 
         return $request->validate($rules);
@@ -229,12 +235,10 @@ class QuoteController extends Controller
         $quote->items()->delete();
 
         foreach ($items as $item) {
-            $quantity = (float) $item['quantity'];
-            $unitPrice = (float) $item['unit_price'];
-            $taxRate = (float) ($item['tax_rate'] ?? 0);
-            $subtotal = round($quantity * $unitPrice, 2);
-            $taxAmount = round($subtotal * $taxRate / 100, 2);
-            $total = round($subtotal + $taxAmount, 2);
+            $quantity = $item['quantity'];
+            $unitPrice = $item['unit_price'];
+            $taxRate = $item['tax_rate'] ?? '0';
+            ['subtotal' => $subtotal, 'total' => $total] = MoneyCalculator::line($item);
 
             QuoteItem::create([
                 'quote_id' => $quote->id,
@@ -255,15 +259,7 @@ class QuoteController extends Controller
     {
         $items = $quote->items()->get();
 
-        $subtotal = $items->sum(fn ($item) => (float) $item->subtotal);
-        $taxAmount = $items->sum(fn ($item) => (float) $item->total - (float) $item->subtotal);
-        $totalAmount = $items->sum(fn ($item) => (float) $item->total);
-
-        $quote->update([
-            'subtotal' => round($subtotal, 2),
-            'tax_amount' => round($taxAmount, 2),
-            'total_amount' => round($totalAmount, 2),
-        ]);
+        $quote->update(MoneyCalculator::totals($items->toArray(), $quote->discount_amount));
     }
 
     private function generateQuoteNumber(int $companyId): string

@@ -20,6 +20,7 @@ class FinancialDataRetentionTest extends TestCase
     use RefreshDatabase;
 
     private Client $client;
+
     private User $owner;
 
     protected function setUp(): void
@@ -33,16 +34,27 @@ class FinancialDataRetentionTest extends TestCase
 
     private function document(string $resource, string $status = 'draft'): array
     {
-        return $this->postJson('/api/'.$resource, [
+        $legacy = $resource === 'invoices' && ! in_array($status, ['draft', 'sent'], true);
+        $document = $this->postJson('/api/'.$resource, [
             'client_id' => $this->client->id,
             $resource === 'invoices' ? 'invoice_date' : 'quote_date' => '2026-11-06',
-            'status' => $status,
+            'status' => $legacy ? 'draft' : $status,
             'items' => [['description' => 'Service', 'quantity' => 1, 'unit_price' => 100, 'tax_rate' => 20]],
         ])->assertCreated()->json();
+        if ($legacy) {
+            // Existing legacy rows remain preserved; the public API no longer accepts financial statuses.
+            DB::table('invoices')->where('id', $document['id'])->update(['status' => $status, 'document_status' => null]);
+        }
+
+        return $document;
     }
 
     private function payment(array $invoice): array
     {
+        if (Invoice::findOrFail($invoice['id'])->document_status === 'draft') {
+            $this->patchJson('/api/invoices/'.$invoice['id'].'/status', ['status' => 'sent'])->assertOk();
+        }
+
         return $this->postJson("/api/invoices/{$invoice['id']}/payments", [
             'amount' => 50, 'payment_date' => '2026-11-06', 'payment_method' => 'cash',
         ])->assertCreated()->json();
@@ -166,7 +178,7 @@ class FinancialDataRetentionTest extends TestCase
         }
         $invoice = $this->document('invoices');
         $this->payment($invoice);
-        $this->patchJson('/api/invoices/'.$invoice['id'].'/status', ['status' => 'draft'])->assertOk();
+        $this->patchJson('/api/invoices/'.$invoice['id'].'/status', ['status' => 'draft'])->assertStatus(409);
         $this->patchJson('/api/invoices/'.$invoice['id'].'/archive')->assertStatus(409);
     }
 

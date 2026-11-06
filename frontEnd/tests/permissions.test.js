@@ -17,7 +17,7 @@ test('employee draft editing never grants issued or archived invoice editing', (
 })
 
 test('administrators and accountants also need to restore archived documents', () => {
-  assert.equal(allows({ 'invoices.update': true }, 'invoices.update', { status: 'sent' }), true)
+  assert.equal(allows({ 'invoices.update': true }, 'invoices.update', { status: 'sent' }), false)
   assert.equal(allows({ 'invoices.update': true }, 'invoices.update', { status: 'draft', archived_at: '2026-11-06' }), false)
 })
 

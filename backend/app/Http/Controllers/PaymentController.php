@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\Payment;
-use App\Support\CompanyCache;
+use App\Services\MoneyCalculator;
+use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,8 +18,14 @@ class PaymentController extends Controller
         $this->authorize('viewAny', [Payment::class, $invoice]);
 
         $payments = $invoice->payments()
-            ->latest()
+            ->with('revisions')->latest()
             ->get();
+
+        foreach ($payments as $entry) {
+            if ($entry->relationLoaded('invoice') && $entry->invoice?->issued_snapshot) {
+                $entry->invoice->setRelation('client', (new Client)->setRawAttributes($entry->invoice->issued_snapshot['client'], true));
+            }
+        }
 
         return response()->json($payments);
     }
@@ -32,10 +40,16 @@ class PaymentController extends Controller
             ->whereHas('invoice', static function ($query) use ($request) {
                 $query->where('company_id', $request->user()->company_id);
             })
-            ->with(['invoice.client'])
+            ->with(['invoice.client', 'revisions'])
             ->orderByDesc('payment_date')
             ->orderByDesc('created_at')
             ->get();
+
+        foreach ($payments as $entry) {
+            if ($entry->relationLoaded('invoice') && $entry->invoice?->issued_snapshot) {
+                $entry->invoice->setRelation('client', (new Client)->setRawAttributes($entry->invoice->issued_snapshot['client'], true));
+            }
+        }
 
         return response()->json($payments);
     }
@@ -45,31 +59,19 @@ class PaymentController extends Controller
         $this->ensureInvoiceBelongsToCompany($request, $invoice);
         $this->authorize('create', [Payment::class, $invoice]);
         abort_if($invoice->archived_at !== null, 409, 'Restaurez le brouillon avant de gérer ses règlements.');
-        abort_unless($invoice->status !== 'cancelled', 422, 'Impossible d’ajouter un paiement à une facture annulée.');
 
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:0.01'],
+            'amount' => ['required', ...MoneyCalculator::rules(true)],
+            'idempotency_key' => ['nullable', 'uuid'],
             'payment_date' => ['required', 'date'],
             'payment_method' => ['required', 'string', 'in:cash,bank_transfer,cheque,credit_card,digital_wallet,other'],
             'reference' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string'],
         ]);
 
-        $this->ensureWithinBalance($invoice, (float) $data['amount']);
+        $payment = app(PaymentService::class)->create($request->user(), $invoice->id, $data);
 
-        $payment = Payment::create([
-            'invoice_id' => $invoice->id,
-            'amount' => $data['amount'],
-            'payment_date' => $data['payment_date'],
-            'payment_method' => $data['payment_method'],
-            'reference' => $data['reference'] ?? null,
-            'notes' => $data['notes'] ?? null,
-        ]);
-
-        $this->refreshInvoiceStatus($invoice);
-        $this->forgetCompanyCaches($invoice->company_id);
-
-        return response()->json($payment->fresh(), 201);
+        return response()->json($payment, 201);
     }
 
     public function show(Request $request, Invoice $invoice, Payment $payment): JsonResponse
@@ -77,7 +79,7 @@ class PaymentController extends Controller
         $this->ensurePaymentBelongsToInvoice($request, $invoice, $payment);
         $this->authorize('view', $payment);
 
-        return response()->json($payment);
+        return response()->json($payment->load('revisions'));
     }
 
     public function update(Request $request, Invoice $invoice, Payment $payment): JsonResponse
@@ -87,28 +89,18 @@ class PaymentController extends Controller
         abort_if($invoice->archived_at !== null, 409, 'Restaurez le brouillon avant de gérer ses règlements.');
 
         $data = $request->validate([
-            'amount' => ['sometimes', 'required', 'numeric', 'min:0.01'],
+            'amount' => ['sometimes', 'required', ...MoneyCalculator::rules(true)],
+            'version' => ['required', 'integer', 'min:1'],
+            'reason' => ['required', 'string', 'min:3', 'max:1000'],
             'payment_date' => ['sometimes', 'required', 'date'],
             'payment_method' => ['sometimes', 'required', 'string', 'in:cash,bank_transfer,cheque,credit_card,digital_wallet,other'],
             'reference' => ['sometimes', 'nullable', 'string', 'max:100'],
             'notes' => ['sometimes', 'nullable', 'string'],
         ]);
 
-        $amount = (float) ($data['amount'] ?? $payment->amount);
-        $this->ensureWithinBalance($invoice, $amount, $payment);
+        $payment = app(PaymentService::class)->update($request->user(), $invoice->id, $payment->id, $data);
 
-        $payment->update([
-            'amount' => $data['amount'] ?? $payment->amount,
-            'payment_date' => $data['payment_date'] ?? $payment->payment_date,
-            'payment_method' => $data['payment_method'] ?? $payment->payment_method,
-            'reference' => array_key_exists('reference', $data) ? $data['reference'] : $payment->reference,
-            'notes' => array_key_exists('notes', $data) ? $data['notes'] : $payment->notes,
-        ]);
-
-        $this->refreshInvoiceStatus($invoice);
-        $this->forgetCompanyCaches($invoice->company_id);
-
-        return response()->json($payment->fresh());
+        return response()->json($payment);
     }
 
     public function destroy(Request $request, Invoice $invoice, Payment $payment): JsonResponse
@@ -117,53 +109,6 @@ class PaymentController extends Controller
         $this->authorize('view', $payment);
 
         return response()->json(['message' => 'Un règlement enregistré doit être conservé et ne peut pas être supprimé.'], 409);
-    }
-
-    /**
-     * Vérifie qu'un montant ne dépasse pas le solde restant de la facture.
-     * Le paiement $excluded (mise à jour) est ignoré du cumul déjà encaissé.
-     */
-    private function ensureWithinBalance(Invoice $invoice, float $amount, ?Payment $excluded = null): void
-    {
-        $paidTotal = 0.0;
-
-        foreach ($invoice->payments()->get() as $existing) {
-            if ($excluded && $existing->id === $excluded->id) {
-                continue;
-            }
-
-            $paidTotal += (float) $existing->amount;
-        }
-
-        $balance = round((float) $invoice->total_amount - $paidTotal, 2);
-
-        abort_unless(
-            $amount <= $balance + 0.001,
-            422,
-            sprintf('Le montant dépasse le solde restant de la facture (%s).', number_format($balance, 2, ',', ' '))
-        );
-    }
-
-    /**
-     * Recalcule le statut financier de la facture en fonction des paiements :
-     * intégralement payée -> 'paid' ; partiellement -> 'partial' ; plus aucun paiement -> 'sent'.
-     */
-    private function refreshInvoiceStatus(Invoice $invoice): void
-    {
-        $paidTotal = (float) $invoice->payments()->sum('amount');
-        $total = (float) $invoice->total_amount;
-
-        if ($paidTotal > 0) {
-            $invoice->update([
-                'status' => $total > 0 && $paidTotal >= $total ? 'paid' : 'partial',
-            ]);
-
-            return;
-        }
-
-        if (in_array($invoice->status, ['paid', 'partial'])) {
-            $invoice->update(['status' => 'sent']);
-        }
     }
 
     private function ensureInvoiceBelongsToCompany(Request $request, Invoice $invoice): void
@@ -181,15 +126,6 @@ class PaymentController extends Controller
         abort_unless(
             $payment->invoice_id === $invoice->id,
             404
-        );
-    }
-
-    private function forgetCompanyCaches(int $companyId): void
-    {
-        CompanyCache::forget(
-            $companyId,
-            CompanyCache::INVOICES,
-            CompanyCache::DASHBOARD,
         );
     }
 }

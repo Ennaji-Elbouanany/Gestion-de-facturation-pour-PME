@@ -22,8 +22,11 @@ class RolePermissionsTest extends TestCase
     use RefreshDatabase;
 
     private Company $company;
+
     private User $actor;
+
     private array $paths;
+
     private array $payloads;
 
     protected function setUp(): void
@@ -38,21 +41,26 @@ class RolePermissionsTest extends TestCase
         $invoice = $sentInvoice = $archivedInvoice = $quote = $sentQuote = $archivedQuote = null;
         foreach (['draft', 'sent', 'archive'] as $kind) {
             $document = Invoice::create(['company_id' => $this->company->id, 'client_id' => $client->id,
-                'invoice_number' => 'TEST-INV-'.$kind, 'invoice_date' => '2026-11-06', 'total_amount' => 120,
+                'invoice_number' => 'TEST-INV-'.$kind, 'invoice_date' => '2026-11-06', 'subtotal' => 100, 'tax_amount' => 20, 'total_amount' => 120,
                 'status' => $kind === 'sent' ? 'sent' : 'draft']);
             $estimate = Quote::create(['company_id' => $this->company->id, 'client_id' => $client->id,
                 'quote_number' => 'TEST-QUO-'.$kind, 'quote_date' => '2026-11-06', 'total_amount' => 120,
                 'status' => $kind === 'sent' ? 'sent' : 'draft']);
-            $document->items()->create(['description' => 'Line', 'quantity' => 1, 'unit_price' => 100, 'subtotal' => 100, 'total' => 120]);
-            $estimate->items()->create(['description' => 'Line', 'quantity' => 1, 'unit_price' => 100, 'subtotal' => 100, 'total' => 120]);
+            $document->items()->create(['description' => 'Line', 'quantity' => 1, 'unit_price' => 100, 'tax_rate' => 20, 'subtotal' => 100, 'total' => 120]);
+            $estimate->items()->create(['description' => 'Line', 'quantity' => 1, 'unit_price' => 100, 'tax_rate' => 20, 'subtotal' => 100, 'total' => 120]);
             if ($kind === 'archive') {
-                $document->archived_at = now(); $document->save();
-                $estimate->archived_at = now(); $estimate->save();
-                $archivedInvoice = $document; $archivedQuote = $estimate;
+                $document->archived_at = now();
+                $document->save();
+                $estimate->archived_at = now();
+                $estimate->save();
+                $archivedInvoice = $document;
+                $archivedQuote = $estimate;
             } elseif ($kind === 'sent') {
-                $sentInvoice = $document; $sentQuote = $estimate;
+                $sentInvoice = $document;
+                $sentQuote = $estimate;
             } else {
-                $invoice = $document; $quote = $estimate;
+                $invoice = $document;
+                $quote = $estimate;
             }
         }
         $payment = Payment::create(['invoice_id' => $sentInvoice->id, 'amount' => 20, 'payment_date' => '2026-11-06', 'payment_method' => 'cash']);
@@ -76,7 +84,7 @@ class RolePermissionsTest extends TestCase
             'quote' => ['client_id' => $client->id, 'quote_date' => '2026-11-06', 'items' => [$line]],
             'line' => $line, 'notes' => ['notes' => 'Updated'], 'statusSent' => ['status' => 'sent'],
             'converted' => ['status' => 'converted'],
-            'payment' => ['amount' => 10, 'payment_date' => '2026-11-06', 'payment_method' => 'cash'],
+            'payment' => ['version' => 1, 'reason' => 'Correction contrôlée', 'amount' => 10, 'payment_date' => '2026-11-06', 'payment_method' => 'cash'],
             'profile' => ['name' => 'Me', 'email' => 'new@example.test'],
             'security' => ['current_password' => 'password', 'password' => 'NewSecret!2026', 'password_confirmation' => 'NewSecret!2026'],
             'company' => ['name' => 'Updated company'], 'billing' => ['currency' => 'MAD'],
@@ -105,7 +113,7 @@ class RolePermissionsTest extends TestCase
             'invoice create draft' => ['POST', 'invoices', '', 'invoice', [201, 201, 201]],
             'invoice create sent' => ['POST', 'invoices', '', 'invoiceSent', [201, 403, 201]],
             'invoice edit draft' => ['PATCH', 'invoice', '', 'notes', [200, 200, 200]],
-            'invoice edit issued' => ['PATCH', 'sentInvoice', '', 'notes', [200, 403, 200]],
+            'invoice edit issued' => ['PATCH', 'sentInvoice', '', 'notes', [409, 403, 409]],
             'invoice status' => ['PATCH', 'invoice', '/status', 'statusSent', [200, 403, 200]],
             'invoice status via patch' => ['PATCH', 'invoice', '', 'statusSent', [200, 403, 200]],
             'invoice status via put' => ['PUT', 'invoice', '', 'statusSent', [200, 403, 200]],
@@ -164,13 +172,15 @@ class RolePermissionsTest extends TestCase
         foreach (['users', 'companies', 'clients', 'products', 'invoices', 'quotes', 'invoice_items', 'quote_items', 'payments'] as $table) {
             $result[$table] = DB::table($table)->orderBy('id')->get()->toArray();
         }
+
         return $result;
     }
 
     #[DataProvider('roleOperations')]
     public function test_role_matrix(string $role, string $method, string $path, string $suffix, ?string $payload, int $status): void
     {
-        $this->actor->role = $role; $this->actor->save();
+        $this->actor->role = $role;
+        $this->actor->save();
         $this->actingAs($this->actor);
         $before = $this->snapshot();
         $key = CompanyCache::key($this->company->id, CompanyCache::DASHBOARD);
@@ -208,7 +218,9 @@ class RolePermissionsTest extends TestCase
         $this->actingAs($actor);
         $before = $this->snapshot();
         foreach (self::operations() as [$method, $path, $suffix, $payload]) {
-            if (!isset($this->paths[$path]) || in_array($path, ['clients', 'products', 'invoices', 'quotes'], true)) continue;
+            if (! isset($this->paths[$path]) || in_array($path, ['clients', 'products', 'invoices', 'quotes'], true)) {
+                continue;
+            }
             $this->json($method, $this->paths[$path].$suffix, $payload ? $this->payloads[$payload] : [])->assertNotFound();
         }
         $this->assertEquals($before, $this->snapshot());
@@ -236,9 +248,13 @@ class RolePermissionsTest extends TestCase
         $this->actingAs($this->actor);
         $paymentId = Payment::firstOrFail()->id;
         $wrongPayment = $this->paths['invoice'].'/payments/'.$paymentId;
-        foreach (['GET', 'PATCH', 'DELETE'] as $method) $this->json($method, $wrongPayment, [])->assertNotFound();
+        foreach (['GET', 'PATCH', 'DELETE'] as $method) {
+            $this->json($method, $wrongPayment, [])->assertNotFound();
+        }
         $line = Quote::where('status', 'sent')->firstOrFail()->items()->firstOrFail();
-        foreach (['GET', 'PATCH', 'DELETE'] as $method) $this->json($method, $this->paths['items'].'/'.$line->id, [])->assertNotFound();
+        foreach (['GET', 'PATCH', 'DELETE'] as $method) {
+            $this->json($method, $this->paths['items'].'/'.$line->id, [])->assertNotFound();
+        }
     }
 
     public function test_role_and_tenant_changes_are_rejected_on_account_endpoints(): void
@@ -278,7 +294,8 @@ class RolePermissionsTest extends TestCase
     {
         $token = $this->actor->createToken('rbac-test', ['*'])->plainTextToken;
         $this->withToken($token)->getJson('/api/payments')->assertOk();
-        $this->actor->role = 'employee'; $this->actor->save();
+        $this->actor->role = 'employee';
+        $this->actor->save();
         app('auth')->forgetGuards();
         $this->withToken($token)->getJson('/api/payments')->assertForbidden();
         $profile = $this->getJson('/api/user')->assertOk();
@@ -300,7 +317,8 @@ class RolePermissionsTest extends TestCase
 
     public function test_employee_summary_is_an_allowlist_even_when_shared_cache_contains_financial_metrics(): void
     {
-        $this->actor->role = 'employee'; $this->actor->save();
+        $this->actor->role = 'employee';
+        $this->actor->save();
         $this->actingAs($this->actor);
         $cached = ['clients_count' => 1, 'products_count' => 1, 'invoices_count' => 2, 'quotes_count' => 2,
             'payments_count' => 1, 'revenue' => 10000, 'collected' => 5000];
@@ -315,8 +333,10 @@ class RolePermissionsTest extends TestCase
     public function test_employee_can_preserve_existing_converted_status_without_forging_a_conversion(): void
     {
         $quote = Quote::where('status', 'sent')->firstOrFail();
-        $quote->status = 'converted'; $quote->save();
-        $this->actor->role = 'employee'; $this->actor->save();
+        $quote->status = 'converted';
+        $quote->save();
+        $this->actor->role = 'employee';
+        $this->actor->save();
         $this->actingAs($this->actor);
         $this->patchJson('/api/quotes/'.$quote->id, ['status' => 'converted', 'notes' => 'Same status'])
             ->assertOk()->assertJsonPath('status', 'converted');

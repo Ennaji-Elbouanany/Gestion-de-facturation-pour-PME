@@ -117,3 +117,8 @@ Voir [les règles de conservation, tests et procédure de sauvegarde avant migra
 ## Permissions par entreprise — lot 2
 
 Voir [la matrice RBAC, les tests et les vérifications avant déploiement](../docs/lot-2-rbac.md). Audit des comptes en lecture seule : `php artisan rbac:audit-accounts`.
+
+
+## Paiements et états financiers — lot 3
+
+Voir [les règles financières, tests MySQL et précautions de migration](../docs/lot-3-finances.md). Audit sans correction : `php artisan billing:audit`.

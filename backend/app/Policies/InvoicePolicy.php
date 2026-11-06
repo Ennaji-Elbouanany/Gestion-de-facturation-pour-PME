@@ -28,7 +28,8 @@ class InvoicePolicy
 
     public function update(User $user, Invoice $record): Response
     {
-        $roles = $record->status === 'draft' ? $this->everyone() : ['admin', 'comptable'];
+        $roles = $record->document_status === 'draft' ? $this->everyone() : ['admin', 'comptable'];
+
         return $this->permit($user, $roles, $record);
     }
 

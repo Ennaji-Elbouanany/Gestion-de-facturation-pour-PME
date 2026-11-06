@@ -296,7 +296,7 @@ function Overview({ user: initialUser, onNavigate }) {
     const previousDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const previousKey = `${previousDate.getFullYear()}-${String(previousDate.getMonth() + 1).padStart(2, '0')}`
 
-    const activeInvoices = invoices.filter((invoice) => invoice.status !== 'cancelled')
+    const activeInvoices = invoices.filter((invoice) => invoice.document_status === 'issued')
 
     const totals = activeInvoices.reduce((sum, invoice) => sum + num(invoice.total_amount), 0)
 

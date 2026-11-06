@@ -3,10 +3,8 @@
 namespace App\Models;
 
 use App\Models\Concerns\PreventsPhysicalDeletion;
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -32,6 +30,8 @@ class Invoice extends Model
     protected function casts(): array
     {
         return [
+            'issued_at' => 'datetime',
+            'issued_snapshot' => 'array',
             'invoice_date' => 'date',
             'due_date' => 'date',
             'archived_at' => 'datetime',
@@ -40,6 +40,29 @@ class Invoice extends Model
             'discount_amount' => 'decimal:2',
             'total_amount' => 'decimal:2',
         ];
+    }
+
+    public function getDocumentStatusAttribute(?string $value): string
+    {
+        return $value ?? match ($this->attributes['status'] ?? 'draft') {
+            'draft' => 'draft', 'cancelled' => 'cancelled', default => 'issued',
+        };
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (Invoice $invoice): void {
+            $state = $invoice->getRawOriginal('document_status') ?? match ($invoice->getRawOriginal('status')) {
+                'draft' => 'draft', 'cancelled' => 'cancelled', default => 'issued',
+            };
+            if ($state !== 'draft' && $invoice->isDirty(['client_id', 'invoice_number', 'invoice_date', 'due_date',
+                'subtotal', 'tax_amount', 'discount_amount', 'total_amount', 'notes', 'issued_snapshot', 'issued_at'])) {
+                abort(409, 'Le contenu d’une facture émise ou annulée est figé.');
+            }
+            if ($state !== 'draft' && $invoice->isDirty('document_status') && $invoice->document_status === 'draft') {
+                abort(409, 'Une facture émise ne peut pas redevenir un brouillon.');
+            }
+        });
     }
 
     public function company(): BelongsTo

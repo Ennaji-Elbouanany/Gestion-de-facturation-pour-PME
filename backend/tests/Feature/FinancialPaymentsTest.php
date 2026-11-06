@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Client;
 use App\Models\Company;
+use App\Models\Payment;
 use App\Models\User;
 use App\Services\PaymentService;
 use App\Support\CompanyCache;
@@ -12,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
@@ -210,5 +212,82 @@ class FinancialPaymentsTest extends TestCase
         $this->artisan('billing:audit')->assertFailed();
         $this->assertEquals($before, DB::table('invoices')->where('id', $invoice['id'])->first());
         $this->postJson('/api/invoices/'.$invoice['id'].'/payments', $this->data())->assertStatus(409);
+    }
+
+    public static function invalidPaymentDates(): array
+    {
+        return [['November 6, 2025'], ['06/11/2026'], ['2026-02-30'], ['2026-11-06T00:00:00Z']];
+    }
+
+    #[DataProvider('invalidPaymentDates')]
+    public function test_payment_dates_require_unambiguous_iso_dates(string $date): void
+    {
+        $invoice = $this->invoice();
+        $url = '/api/invoices/'.$invoice['id'].'/payments';
+        $this->postJson($url, array_replace($this->data(), ['payment_date' => $date]))
+            ->assertUnprocessable()->assertJsonValidationErrors('payment_date');
+        $this->assertDatabaseCount('payments', 0);
+        $payment = $this->postJson($url, $this->data())->assertCreated()->json();
+        $this->patchJson($url.'/'.$payment['id'], ['payment_date' => $date, 'version' => 1, 'reason' => 'Date correction'])
+            ->assertUnprocessable()->assertJsonValidationErrors('payment_date');
+        $this->assertDatabaseHas('payments', ['id' => $payment['id'], 'version' => 1]);
+        $this->assertDatabaseCount('payment_revisions', 0);
+    }
+
+    public function test_payment_date_preserves_year_and_omitted_date_on_correction(): void
+    {
+        $invoice = $this->invoice();
+        $url = '/api/invoices/'.$invoice['id'].'/payments';
+        $payment = $this->postJson($url, array_replace($this->data(), ['payment_date' => '2025-11-06']))
+            ->assertCreated()->json();
+        $this->patchJson($url.'/'.$payment['id'], ['amount' => '20.00', 'version' => 1, 'reason' => 'Amount correction'])
+            ->assertOk()->assertJsonPath('version', 2);
+        $this->assertSame('2025-11-06', Payment::findOrFail($payment['id'])->payment_date->toDateString());
+    }
+
+    public function test_service_rejects_ambiguous_payment_dates_without_http_validation(): void
+    {
+        $invoice = $this->invoice();
+        $service = app(PaymentService::class);
+        try {
+            $service->create($this->actor, $invoice['id'], array_replace($this->data(), ['payment_date' => 'November 6, 2025']));
+            $this->fail('Date validation expected');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('payment_date', $exception->errors());
+        }
+        $payment = $service->create($this->actor, $invoice['id'], $this->data());
+        try {
+            $service->update($this->actor, $invoice['id'], $payment->id, ['payment_date' => '06/11/2026', 'version' => 1, 'reason' => 'Date correction']);
+            $this->fail('Date validation expected');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('payment_date', $exception->errors());
+        }
+        $this->assertSame(1, $payment->fresh()->version);
+        $this->assertDatabaseCount('payment_revisions', 0);
+    }
+
+    public function test_partial_invoice_updates_validate_effective_dates_and_roll_back(): void
+    {
+        $invoice = $this->invoice(false);
+        $url = '/api/invoices/'.$invoice['id'];
+        $this->patchJson($url, ['invoice_date' => '2026-11-06', 'due_date' => '2026-11-10'])->assertOk();
+        $this->patchJson($url, ['invoice_date' => '2026-11-20', 'notes' => 'Must roll back'])
+            ->assertUnprocessable()->assertJsonValidationErrors('due_date');
+        $this->patchJson($url, ['due_date' => '2026-11-05'])->assertUnprocessable()->assertJsonValidationErrors('due_date');
+        $this->assertDatabaseHas('invoices', ['id' => $invoice['id'], 'notes' => null]);
+        $this->patchJson($url, ['due_date' => '2026-11-12'])->assertOk();
+        $this->patchJson($url, ['invoice_date' => '2026-11-07'])->assertOk();
+        $this->patchJson($url, ['invoice_date' => '2026-11-20', 'due_date' => '2026-11-21'])->assertOk();
+        $this->patchJson($url, ['due_date' => null])->assertOk()->assertJsonPath('due_date', null);
+        $this->patchJson($url.'/status', ['status' => 'sent'])->assertOk();
+    }
+
+    public function test_issuance_rejects_legacy_draft_with_inconsistent_dates(): void
+    {
+        $invoice = $this->invoice(false);
+        DB::table('invoices')->where('id', $invoice['id'])->update(['invoice_date' => '2026-11-20', 'due_date' => '2026-11-10']);
+        $this->patchJson('/api/invoices/'.$invoice['id'].'/status', ['status' => 'sent'])
+            ->assertUnprocessable()->assertJsonValidationErrors('due_date');
+        $this->assertDatabaseHas('invoices', ['id' => $invoice['id'], 'status' => 'draft', 'issued_snapshot' => null, 'issued_at' => null]);
     }
 }

@@ -166,12 +166,15 @@ function Quotes() {
     setFormData(emptyForm)
   }
 
-  function calculateSubtotal() { return documentTotals(formData.items).subtotal }
-  function calculateTaxAmount() { return documentTotals(formData.items).tax }
-  function calculateTotal() { return documentTotals(formData.items).total }
+  const quotePreview = documentTotals(formData.items)
+  const itemPreview = lineTotals(itemForm)
+  function calculateSubtotal() { return quotePreview.subtotal }
+  function calculateTaxAmount() { return quotePreview.tax }
+  function calculateTotal() { return quotePreview.total }
 
   async function handleSubmit(event) {
     event.preventDefault()
+    if (quotePreview.error) { setMessage(quotePreview.error); return }
     setIsSubmitting(true)
     setMessage('')
 
@@ -300,6 +303,7 @@ function Quotes() {
   async function handleItemSubmit(event) {
     event.preventDefault()
     if (!selectedQuote) return
+    if (itemPreview.error) { setMessage(itemPreview.error); return }
     setIsItemSubmitting(true)
     setMessage('')
 
@@ -342,6 +346,7 @@ function Quotes() {
   }
 
   function formatPrice(value) {
+    if (value === null) return '—'
     const amount = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     return `${amount.format(Number(value) || 0)} DH`
   }
@@ -397,7 +402,8 @@ function Quotes() {
 
         <label className="quote-notes-label">Notes<input name="notes" value={formData.notes} onChange={handleChange} placeholder="Notes internes (optionnel)" /></label>
 
-        <div className="quote-form-actions"><button className="cancel-button" type="button" onClick={closeForm}>Annuler</button><button className="primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</button></div>
+        {quotePreview.error && <p role="alert">{quotePreview.error}</p>}
+        <div className="quote-form-actions"><button className="cancel-button" type="button" onClick={closeForm}>Annuler</button><button className="primary-button" type="submit" disabled={isSubmitting || Boolean(quotePreview.error)}>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</button></div>
       </form>}
 
       {selectedQuote && <section className="quotes-panel">
@@ -417,7 +423,8 @@ function Quotes() {
               <span />
             </div>
           </div>
-          <div className="quote-form-actions">{editingItem && <button className="cancel-button" type="button" onClick={cancelEditItem}>Annuler</button>}<button className="primary-button" type="submit" disabled={isItemSubmitting}>{isItemSubmitting ? 'Enregistrement...' : editingItem ? 'Mettre a jour' : 'Ajouter la ligne'}</button></div>
+          {itemPreview.error && <p role="alert">{itemPreview.error}</p>}
+          <div className="quote-form-actions">{editingItem && <button className="cancel-button" type="button" onClick={cancelEditItem}>Annuler</button>}<button className="primary-button" type="submit" disabled={isItemSubmitting || Boolean(itemPreview.error)}>{isItemSubmitting ? 'Enregistrement...' : editingItem ? 'Mettre a jour' : 'Ajouter la ligne'}</button></div>
         </form>}
         {isItemsLoading ? <p className="empty-state">Chargement des lignes...</p> : quoteItems.length === 0 ? <p className="empty-state">Aucune ligne pour ce devis.</p> : <div className="table-scroll"><table className="data-table quote-lines-table"><thead><tr><th>DESCRIPTION</th><th>PRODUIT</th><th>QTÉ</th><th className="num">PRIX UNITAIRE</th><th>TVA</th><th className="num">TOTAL</th><th className="actions-col">ACTIONS</th></tr></thead><tbody>{quoteItems.map((item) => <tr key={item.id}><td><strong>{item.description}</strong></td><td>{item.product ? item.product.name : '-'}</td><td>{item.quantity}</td><td className="num">{formatPrice(item.unit_price)}</td><td>{item.tax_rate ? `${item.tax_rate} %` : '-'}</td><td className="num"><strong>{formatPrice(item.total)}</strong></td><td className="actions-cell"><div className="quote-actions">{can('quotes.update', selectedQuote) && <button type="button" onClick={() => startEditItem(item)}>Modifier</button>}{can('quotes.update', selectedQuote) && <button className="delete-button" type="button" onClick={() => handleItemDelete(item)}>Supprimer</button>}</div></td></tr>)}</tbody></table></div>}
       </section>}

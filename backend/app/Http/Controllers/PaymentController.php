@@ -63,7 +63,7 @@ class PaymentController extends Controller
         $data = $request->validate([
             'amount' => ['required', ...MoneyCalculator::rules(true)],
             'idempotency_key' => ['nullable', 'uuid'],
-            'payment_date' => ['required', 'date'],
+            'payment_date' => ['required', 'date_format:Y-m-d'],
             'payment_method' => ['required', 'string', 'in:cash,bank_transfer,cheque,credit_card,digital_wallet,other'],
             'reference' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string'],
@@ -92,7 +92,7 @@ class PaymentController extends Controller
             'amount' => ['sometimes', 'required', ...MoneyCalculator::rules(true)],
             'version' => ['required', 'integer', 'min:1'],
             'reason' => ['required', 'string', 'min:3', 'max:1000'],
-            'payment_date' => ['sometimes', 'required', 'date'],
+            'payment_date' => ['sometimes', 'required', 'date_format:Y-m-d'],
             'payment_method' => ['sometimes', 'required', 'string', 'in:cash,bank_transfer,cheque,credit_card,digital_wallet,other'],
             'reference' => ['sometimes', 'nullable', 'string', 'max:100'],
             'notes' => ['sometimes', 'nullable', 'string'],

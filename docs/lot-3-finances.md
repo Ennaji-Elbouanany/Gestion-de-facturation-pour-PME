@@ -149,3 +149,60 @@ La numérotation globale et l’idempotence de conversion devis–facture resten
 La première suite MySQL a révélé le problème d’index de clé étrangère au rollback ; il a été corrigé puis la suite complète a été relancée avec succès. Le conteneur temporaire a été arrêté/supprimé et Docker Desktop a été remis à l’arrêt, son état initial. Les variables de connexion locales ont été restaurées après chaque commande MySQL ; le fichier .env n’a pas été modifié. L’image MySQL téléchargée reste dans le cache Docker local.
 
 La validation visuelle des interfaces dans un navigateur n’a pas été effectuée. Aucun déploiement, migration distante ou changement des données de production n’a été réalisé.
+
+
+## Corrections après audit final du lot 3
+
+Les cinq anomalies P1 et les deux anomalies P2 validées ont été corrigées sans migration ni modification des données de production.
+
+- Les dates de paiement et de facture reçues par les API concernées exigent `Y-m-d`. Les formats textuels, ambigus et les timestamps sont refusés avec 422. Une correction sans nouvelle date conserve exactement la date précédente.
+- Les PATCH de facture comparent les dates effectives, y compris les champs inchangés, après verrouillage de la facture. L'émission vérifie également leur cohérence. Une échéance nulle reste autorisée.
+- L'archivage/restauration des brouillons utilise une seule invalidation protégée après commit. Toutes les clés concernées sont tentées même si l'une échoue ; le cache des devis est inclus. Un rollback n'invalide pas le cache.
+- Le rollback de la migration financière refuse aussi de supprimer les clés, empreintes ou versions de paiement utilisées. Son `up()` reste inchangé : aucune nouvelle migration de schéma n'est nécessaire pour appliquer ces corrections à une base ayant déjà reçu le lot 3.
+- React reconnaît le succès d'un paiement avant de rafraîchir la facture. En cas de panne de lecture, un avertissement confirme l'enregistrement et bloque les nouvelles opérations jusqu'à l'actualisation du solde. Une erreur de mutation conserve la saisie.
+- Sur 409 pendant une correction, un bouton permet explicitement de recharger la version du règlement tout en conservant les champs saisis et le motif. L'utilisateur doit vérifier puis soumettre sa correction ; aucun renvoi automatique.
+- Les badges d'échéance acceptent les dates ISO Laravel et comparent des jours calendaires. Les factures payées/annulées n'affichent pas de badge.
+- Les aperçus de facture et de devis signalent les montants invalides et les dépassements par multiplication ou cumul. Ils affichent un tiret et une erreur, puis bloquent la soumission ; ils ne remplacent plus ces montants par zéro.
+
+### Fichiers concernés par les corrections
+
+Backend :
+
+- `backend/app/Http/Controllers/Concerns/ArchivesDrafts.php`
+- `backend/app/Http/Controllers/InvoiceController.php`
+- `backend/app/Http/Controllers/PaymentController.php`
+- `backend/app/Services/FinancialTransaction.php`
+- `backend/app/Services/InvoiceService.php`
+- `backend/app/Services/PaymentService.php`
+- `backend/database/migrations/2026_11_07_000001_add_financial_integrity_fields.php`
+- `backend/tests/Feature/FinancialDataRetentionTest.php`
+- `backend/tests/Feature/FinancialIntegrityMigrationTest.php`
+- `backend/tests/Feature/FinancialPaymentsTest.php`
+
+Frontend et documentation :
+
+- `frontEnd/src/components/invoices/Invoices.jsx`
+- `frontEnd/src/components/quotes/Quotes.jsx`
+- `frontEnd/src/services/money.js`
+- `frontEnd/src/services/paymentWorkflow.js` (nouveau)
+- `frontEnd/tests/money.test.js`
+- `frontEnd/tests/paymentWorkflow.test.js` (nouveau)
+- `docs/lot-3-finances.md`
+
+### Vérifications après corrections
+
+- SQLite en mémoire : 250 tests réussis, 4 ignorés (concurrence MySQL), 0 échec ; 1 238 assertions.
+- MySQL 8.0.46 local isolé : 254 tests réussis, 0 ignoré, 0 échec ; 1 265 assertions. Les quatre scénarios de concurrence multiprocessus sont inclus.
+- Frontend : 20 tests réussis, 0 échec.
+- ESLint, build React dans un dossier temporaire, Composer validate, Pint et git diff --check : réussis.
+- Le conteneur MySQL temporaire et ses volumes ont été supprimés ; Docker Desktop a été remis à l’arrêt. Les variables ont été limitées aux processus de test ; aucun fichier .env n’a été modifié.
+
+Les 15 nouveaux cas backend couvrent les dates, les PATCH/émissions incohérents, les pannes de cache après archivage/restauration, le rollback transactionnel et la conservation des métadonnées de paiement. Les 9 nouveaux tests frontend couvrent les limites monétaires, les dates ISO, l'ordre mutation/rafraîchissement et la conservation du brouillon de correction.
+
+### Précautions et validation manuelle restante
+
+Les clients API doivent envoyer des dates calendrier `AAAA-MM-JJ` ; vérifier les intégrations existantes avant livraison coordonnée backend/frontend. La clé d'idempotence reste facultative pour préserver les anciens clients. Sa persistance au-delà d'un rechargement du navigateur et les optimisations volumétriques ne sont pas ajoutées par ces corrections.
+
+Avant livraison, vérifier visuellement : création/émission, paiements partiel/complet, correction et historique, 403/422, deux onglets en conflit 409, paiement réussi suivi d'un GET échoué, échéances et dépassements de montants sur facture/devis. Les tests Node ne constituent pas des tests de navigateur.
+
+Conserver la procédure de sauvegarde et de restauration sur copie décrite ci-dessus. Le Dockerfile exécute toujours les migrations au démarrage. Aucun ancien instantané n'a été fabriqué ; les anciens documents sans preuve historique conservent leur signalement. Aucune optimisation du lot 6, aucun travail du lot 4, aucun commit ni déploiement ne fait partie de ces corrections.

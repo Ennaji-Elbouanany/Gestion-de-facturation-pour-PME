@@ -129,8 +129,8 @@ class InvoiceController extends Controller
                     }
                 });
             })],
-            'invoice_date' => ['required', 'date'],
-            'due_date' => ['nullable', 'date', 'after_or_equal:invoice_date'],
+            'invoice_date' => ['required', 'date_format:Y-m-d'],
+            'due_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:invoice_date'],
             'status' => ['sometimes', 'string', 'in:draft,sent,cancelled'],
             'notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1', 'max:200'],
@@ -148,6 +148,8 @@ class InvoiceController extends Controller
                 }
             }
             unset($rule);
+            // Compare effective dates under the invoice lock in InvoiceService.
+            $rules['due_date'] = ['sometimes', 'nullable', 'date_format:Y-m-d'];
         }
 
         return $request->validate($rules);

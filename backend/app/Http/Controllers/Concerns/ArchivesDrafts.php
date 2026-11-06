@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Concerns;
 use App\Models\Invoice;
 use App\Models\Quote;
 use App\Services\FinancialTransaction;
+use App\Support\CompanyCache;
 use App\Support\InvoiceView;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 trait ArchivesDrafts
 {
@@ -24,11 +24,10 @@ trait ArchivesDrafts
             }
             $locked->archived_at = $archive ? ($locked->archived_at ?? now()) : null;
             $locked->save();
-            FinancialTransaction::invalidate($locked->company_id);
+            FinancialTransaction::invalidate($locked->company_id, ...($locked instanceof Quote ? [CompanyCache::QUOTES] : []));
 
             return $locked->load(['client:id,name,deleted_at', 'items']);
         });
-        DB::afterCommit(fn () => $this->forgetCompanyCaches($request->user()->company_id));
 
         return response()->json($document instanceof Invoice ? InvoiceView::one($document, $request->user()) : $document);
     }

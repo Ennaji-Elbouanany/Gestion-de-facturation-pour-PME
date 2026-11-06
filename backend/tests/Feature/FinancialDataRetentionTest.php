@@ -8,11 +8,14 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Quote;
 use App\Models\User;
+use App\Support\CompanyCache;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use LogicException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class FinancialDataRetentionTest extends TestCase
@@ -252,5 +255,47 @@ class FinancialDataRetentionTest extends TestCase
                 }
             }
         }
+    }
+
+    public static function draftResources(): array
+    {
+        return [['invoices'], ['quotes']];
+    }
+
+    #[DataProvider('draftResources')]
+    public function test_archive_restore_succeed_despite_cache_failure(string $resource): void
+    {
+        $document = $this->document($resource);
+        $keys = [CompanyCache::INVOICES, CompanyCache::DASHBOARD];
+        if ($resource === 'quotes') {
+            $keys[] = CompanyCache::QUOTES;
+        }
+        $cache = Cache::partialMock();
+        foreach ($keys as $key) {
+            $cache->shouldReceive('forget')->with(CompanyCache::key($this->owner->company_id, $key))
+                ->twice()->andThrow(new \RuntimeException('Simulated archive cache failure'));
+        }
+        $url = '/api/'.$resource.'/'.$document['id'];
+        $this->patchJson($url.'/archive')->assertOk();
+        $this->assertNotNull(DB::table($resource)->where('id', $document['id'])->value('archived_at'));
+        $this->patchJson($url.'/restore')->assertOk()->assertJsonPath('archived_at', null);
+        $this->assertDatabaseHas($resource, ['id' => $document['id'], 'archived_at' => null]);
+        $this->assertDatabaseCount($resource === 'quotes' ? 'quote_items' : 'invoice_items', 1);
+    }
+
+    #[DataProvider('draftResources')]
+    public function test_archive_rollback_preserves_state_without_cache_invalidation(string $resource): void
+    {
+        $document = $this->document($resource);
+        Cache::partialMock()->shouldNotReceive('forget');
+        try {
+            DB::transaction(function () use ($resource, $document): void {
+                $this->patchJson('/api/'.$resource.'/'.$document['id'].'/archive')->assertOk();
+                throw new \RuntimeException('Abort archive transaction');
+            });
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Abort archive transaction', $exception->getMessage());
+        }
+        $this->assertDatabaseHas($resource, ['id' => $document['id'], 'archived_at' => null]);
     }
 }

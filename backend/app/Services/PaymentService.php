@@ -14,7 +14,7 @@ final class PaymentService
 {
     public function create(User $actor, int $invoiceId, array $data): Payment
     {
-        Validator::make($data, ['amount' => ['required', ...MoneyCalculator::rules(true)], 'payment_date' => ['required', 'date'], 'payment_method' => ['required', 'in:cash,bank_transfer,cheque,credit_card,digital_wallet,other'], 'idempotency_key' => ['nullable', 'uuid']])->validate();
+        Validator::make($data, ['amount' => ['required', ...MoneyCalculator::rules(true)], 'payment_date' => ['required', 'date_format:Y-m-d'], 'payment_method' => ['required', 'in:cash,bank_transfer,cheque,credit_card,digital_wallet,other'], 'idempotency_key' => ['nullable', 'uuid']])->validate();
 
         return FinancialTransaction::run(function () use ($actor, $invoiceId, $data) {
             $invoice = InvoiceService::locked($actor, $invoiceId);
@@ -45,7 +45,7 @@ final class PaymentService
 
     public function update(User $actor, int $invoiceId, int $paymentId, array $data): Payment
     {
-        Validator::make($data, ['amount' => ['sometimes', ...MoneyCalculator::rules(true)], 'version' => ['required', 'integer', 'min:1'], 'reason' => ['required', 'string', 'min:3', 'max:1000']])->validate();
+        Validator::make($data, ['amount' => ['sometimes', ...MoneyCalculator::rules(true)], 'payment_date' => ['sometimes', 'required', 'date_format:Y-m-d'], 'version' => ['required', 'integer', 'min:1'], 'reason' => ['required', 'string', 'min:3', 'max:1000']])->validate();
 
         return FinancialTransaction::run(function () use ($actor, $invoiceId, $paymentId, $data) {
             $invoice = InvoiceService::locked($actor, $invoiceId);
@@ -54,7 +54,7 @@ final class PaymentService
             $paid = $this->checkInvoice($invoice);
             abort_unless($payment->version === (int) $data['version'], 409, 'Ce règlement a été corrigé. Rechargez-le avant de réessayer.');
             $before = $payment->only(['amount', 'payment_date', 'payment_method', 'reference', 'notes', 'version']);
-            $fields = $this->fields(array_merge($payment->toArray(), $data));
+            $fields = $this->fields(array_merge($payment->toArray(), ['payment_date' => $payment->payment_date->toDateString()], $data));
             $this->checkBalance($invoice, MoneyCalculator::money(MoneyCalculator::decimal($paid)->minus($payment->amount)), $fields['amount']);
             $payment->fill($fields);
             $payment->version++;
@@ -88,7 +88,7 @@ final class PaymentService
     private function fields(array $data): array
     {
         return ['amount' => MoneyCalculator::bounded($data['amount']),
-            'payment_date' => substr((string) $data['payment_date'], 0, 10), 'payment_method' => $data['payment_method'],
+            'payment_date' => $data['payment_date'], 'payment_method' => $data['payment_method'],
             'reference' => $data['reference'] ?? null, 'notes' => $data['notes'] ?? null];
     }
 }

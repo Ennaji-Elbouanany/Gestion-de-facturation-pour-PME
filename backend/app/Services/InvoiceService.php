@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Invoice;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Validator;
 
 final class InvoiceService
 {
@@ -66,6 +67,7 @@ final class InvoiceService
             Gate::forUser($actor)->authorize('update', $invoice);
             abort_if($invoice->archived_at !== null || $invoice->document_status !== 'draft', 409, 'Seul un brouillon actif peut être modifié.');
             abort_if($invoice->payments()->lockForUpdate()->exists(), 409, 'Une facture avec règlement ne peut pas être modifiée.');
+            self::validateDates($invoice, $data);
             $target = $data['status'] ?? 'draft';
             $invoice->fill(collect($data)->only(['client_id', 'invoice_date', 'due_date', 'notes'])->all());
             $invoice->save();
@@ -109,6 +111,7 @@ final class InvoiceService
         abort_unless(($state === 'draft' && $next === 'issued') || ($state === 'issued' && $next === 'cancelled'), 409, 'Transition documentaire interdite.');
         abort_if(! MoneyCalculator::decimal($paid)->isZero(), 409, 'Une facture avec règlement ne peut pas être émise ou annulée ainsi.');
         if ($next === 'issued') {
+            self::validateDates($invoice);
             abort_unless($invoice->items()->exists(), 409, 'La facture doit contenir au moins une ligne.');
             $invoice->load(['company', 'client', 'items']);
             foreach ($invoice->items as $item) {
@@ -130,6 +133,19 @@ final class InvoiceService
         $invoice->document_status = $next;
         $invoice->status = $target;
         $invoice->save();
+    }
+
+    private static function validateDates(Invoice $invoice, array $data = []): void
+    {
+        // Called with the parent row locked: PATCH rules must include unchanged dates.
+        $dates = array_merge([
+            'invoice_date' => $invoice->invoice_date?->toDateString(),
+            'due_date' => $invoice->due_date?->toDateString(),
+        ], array_intersect_key($data, array_flip(['invoice_date', 'due_date'])));
+        Validator::make($dates, [
+            'invoice_date' => ['required', 'date_format:Y-m-d'],
+            'due_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:invoice_date'],
+        ])->validate();
     }
 
     public static function syncItems(Invoice $invoice, array $items): void

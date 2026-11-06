@@ -35,8 +35,9 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (DB::table('payment_revisions')->exists() || DB::table('invoices')->whereNotNull('issued_snapshot')->exists()) {
-            throw new RuntimeException('Le retour arrière détruirait des instantanés ou des corrections financières.');
+        if (DB::table('payment_revisions')->exists() || DB::table('invoices')->whereNotNull('issued_snapshot')->exists()
+            || DB::table('payments')->whereNotNull('idempotency_key')->orWhereNotNull('request_hash')->orWhere('version', '>', 1)->exists()) {
+            throw new RuntimeException('Le retour arrière détruirait des instantanés, des corrections ou des informations d’idempotence financières.');
         }
         // MySQL may replace its implicit invoice FK index with our composite unique index.
         // Preserve a standalone supporting index before removing that composite index.

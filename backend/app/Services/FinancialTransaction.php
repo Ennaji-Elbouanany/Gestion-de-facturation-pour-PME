@@ -24,14 +24,16 @@ final class FinancialTransaction
         }
     }
 
-    public static function invalidate(int $companyId): void
+    public static function invalidate(int $companyId, string ...$resources): void
     {
-        DB::afterCommit(function () use ($companyId): void {
-            try {
-                CompanyCache::forget($companyId, CompanyCache::INVOICES, CompanyCache::DASHBOARD);
-            } catch (\Throwable $exception) {
-                // The money transaction is already committed; never turn a cache outage into a failed payment response.
-                report($exception);
+        DB::afterCommit(function () use ($companyId, $resources): void {
+            foreach (array_unique([CompanyCache::INVOICES, CompanyCache::DASHBOARD, ...$resources]) as $resource) {
+                try {
+                    CompanyCache::forget($companyId, $resource);
+                } catch (\Throwable $exception) {
+                    // The transaction is committed; still attempt the remaining cache keys.
+                    report($exception);
+                }
             }
         });
     }

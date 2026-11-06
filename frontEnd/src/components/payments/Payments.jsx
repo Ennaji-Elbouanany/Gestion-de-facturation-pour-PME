@@ -143,19 +143,6 @@ function Payments() {
 
   const filteredTotal = filtered.reduce((sum, payment) => sum + num(payment.amount), 0)
 
-  async function handleDelete(payment) {
-    if (!window.confirm(`Supprimer ce paiement de ${formatPrice(payment.amount)} ?`)) return
-    setMessage('')
-
-    try {
-      await apiRequest(`/api/invoices/${payment.invoice_id}/payments/${payment.id}`, { method: 'DELETE' })
-      setPayments((current) => current.filter((item) => item.id !== payment.id))
-      setMessage('Paiement supprimé avec succès.')
-    } catch (error) {
-      setMessage(error.message)
-    }
-  }
-
   return (
     <section className="payments-page">
       <div className="payments-heading">
@@ -216,7 +203,7 @@ function Payments() {
                 <span className="pay-method-cell"><i className="pay-method-dot" style={{ background: paymentMethodColors[payment.payment_method] || '#93a19a' }} aria-hidden="true" />{paymentMethodLabels[payment.payment_method] || payment.payment_method}</span>
                 <span>{payment.reference || '—'}</span>
                 <strong className="pay-amount">{formatPrice(payment.amount)}</strong>
-                <div className="pay-actions"><button type="button" onClick={() => handleDelete(payment)}>Supprimer</button></div>
+                <div className="pay-actions"><span title="Un règlement enregistré ne peut pas être supprimé">Conservé</span></div>
               </div>
             ))}
           </div>

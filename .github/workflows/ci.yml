@@ -56,6 +56,53 @@ jobs:
       - name: Run PHPUnit tests
         run: php artisan test
 
+  backend-mysql:
+    name: Financial retention (MySQL 8)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: retention_test
+          MYSQL_ROOT_PASSWORD: retention_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pretention_ci"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: retention_test
+      DB_USERNAME: root
+      DB_PASSWORD: retention_ci
+      DB_URL: ""
+      CACHE_STORE: array
+      MAIL_MAILER: array
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: array
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, pdo_mysql
+          coverage: none
+          tools: composer:v2
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - run: |
+          cp .env.example .env
+          php artisan key:generate --force
+      - name: Test retention and upgrades on MySQL
+        run: php artisan test --filter=Financial
+
   frontend:
     name: Frontend React and Vite
     runs-on: ubuntu-latest

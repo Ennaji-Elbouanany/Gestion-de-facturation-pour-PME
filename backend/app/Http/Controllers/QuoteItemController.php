@@ -25,6 +25,7 @@ class QuoteItemController extends Controller
     public function store(Request $request, Quote $quote): JsonResponse
     {
         $this->ensureQuoteBelongsToCompany($request, $quote);
+        abort_if($quote->archived_at !== null, 409, 'Restaurez le brouillon avant de modifier ses lignes.');
 
         $data = $request->validate([
             'product_id' => ['nullable', 'integer', Rule::exists('products', 'id')->where('company_id', $request->user()->company_id)],
@@ -62,6 +63,7 @@ class QuoteItemController extends Controller
     public function update(Request $request, Quote $quote, QuoteItem $quoteItem): JsonResponse
     {
         $this->ensureItemBelongsToQuote($request, $quote, $quoteItem);
+        abort_if($quote->archived_at !== null, 409, 'Restaurez le brouillon avant de modifier ses lignes.');
 
         $data = $request->validate([
             'product_id' => ['sometimes', 'nullable', 'integer', Rule::exists('products', 'id')->where('company_id', $request->user()->company_id)],
@@ -88,6 +90,7 @@ class QuoteItemController extends Controller
     public function destroy(Request $request, Quote $quote, QuoteItem $quoteItem): JsonResponse
     {
         $this->ensureItemBelongsToQuote($request, $quote, $quoteItem);
+        abort_if($quote->archived_at !== null, 409, 'Restaurez le brouillon avant de modifier ses lignes.');
         $quoteItem->delete();
 
         $this->recalculateQuoteTotals($quote);

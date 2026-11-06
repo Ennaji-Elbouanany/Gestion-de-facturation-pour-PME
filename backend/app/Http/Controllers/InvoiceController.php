@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ArchivesDrafts;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -14,6 +15,8 @@ use Illuminate\Validation\Rule;
 
 class InvoiceController extends Controller
 {
+    use ArchivesDrafts;
+
     public function index(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;
@@ -21,7 +24,7 @@ class InvoiceController extends Controller
             CompanyCache::key($companyId, CompanyCache::INVOICES),
             now()->addMinutes(2),
             fn () => Invoice::where('company_id', $companyId)
-                ->with(['client:id,name', 'items'])
+                ->with(['client:id,name,deleted_at', 'items'])
                 ->latest()
                 ->get()
         );
@@ -47,7 +50,7 @@ class InvoiceController extends Controller
 
             $this->syncItems($invoice, $data['items']);
 
-            return $invoice->fresh(['client:id,name', 'items']);
+            return $invoice->fresh(['client:id,name,deleted_at', 'items']);
         });
 
         $this->forgetCompanyCaches($request->user()->company_id);
@@ -59,14 +62,15 @@ class InvoiceController extends Controller
     {
         $this->ensureBelongsToCompany($request, $invoice);
 
-        return response()->json($invoice->load(['client:id,name,email,phone,address,city,country', 'items', 'payments']));
+        return response()->json($invoice->load(['client:id,name,email,phone,address,city,country,deleted_at', 'items', 'payments']));
     }
 
     public function update(Request $request, Invoice $invoice): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $invoice);
+        abort_if($invoice->archived_at !== null, 409, 'Restaurez le brouillon avant de le modifier.');
 
-        $data = $this->validateInvoice($request, true);
+        $data = $this->validateInvoice($request, true, $invoice->client_id);
 
         $invoice = DB::transaction(function () use ($invoice, $data) {
             $invoice->update([
@@ -81,7 +85,7 @@ class InvoiceController extends Controller
                 $this->syncItems($invoice, $data['items']);
             }
 
-            return $invoice->fresh(['client:id,name', 'items']);
+            return $invoice->fresh(['client:id,name,deleted_at', 'items']);
         });
 
         $this->forgetCompanyCaches($request->user()->company_id);
@@ -92,17 +96,24 @@ class InvoiceController extends Controller
     public function destroy(Request $request, Invoice $invoice): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $invoice);
-        $invoice->delete();
-        $this->forgetCompanyCaches($request->user()->company_id);
 
-        return response()->json([
-            'message' => 'Facture supprimée avec succès.',
-        ]);
+        return response()->json(['message' => 'Ce document doit être conservé. Vous pouvez archiver un brouillon.'], 409);
+    }
+
+    public function archive(Request $request, Invoice $invoice): JsonResponse
+    {
+        return $this->changeDraftArchive($request, $invoice, true);
+    }
+
+    public function restore(Request $request, Invoice $invoice): JsonResponse
+    {
+        return $this->changeDraftArchive($request, $invoice, false);
     }
 
     public function updateStatus(Request $request, Invoice $invoice): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $invoice);
+        abort_if($invoice->archived_at !== null, 409, 'Restaurez le brouillon avant de le modifier.');
 
         $data = $request->validate([
             'status' => ['required', 'string', 'in:draft,sent,paid,partial,overdue,cancelled'],
@@ -111,15 +122,22 @@ class InvoiceController extends Controller
         $invoice->update(['status' => $data['status']]);
         $this->forgetCompanyCaches($request->user()->company_id);
 
-        return response()->json($invoice->fresh(['client:id,name', 'items']));
+        return response()->json($invoice->fresh(['client:id,name,deleted_at', 'items']));
     }
 
-    private function validateInvoice(Request $request, bool $partial = false): array
+    private function validateInvoice(Request $request, bool $partial = false, ?int $existingClientId = null): array
     {
         $companyId = $request->user()->company_id;
 
         $rules = [
-            'client_id' => ['required', 'integer', Rule::exists('clients', 'id')->where('company_id', $companyId)],
+            'client_id' => ['required', 'integer', Rule::exists('clients', 'id')->where(function ($query) use ($companyId, $existingClientId) {
+                $query->where('company_id', $companyId)->where(function ($clients) use ($existingClientId) {
+                    $clients->whereNull('deleted_at');
+                    if ($existingClientId !== null) {
+                        $clients->orWhere('id', $existingClientId);
+                    }
+                });
+            })],
             'invoice_date' => ['required', 'date'],
             'due_date' => ['nullable', 'date', 'after_or_equal:invoice_date'],
             'status' => ['sometimes', 'string', 'in:draft,sent,paid,partial,overdue,cancelled'],

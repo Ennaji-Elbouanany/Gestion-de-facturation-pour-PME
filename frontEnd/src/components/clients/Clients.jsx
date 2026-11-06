@@ -13,6 +13,7 @@ function Clients() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState('')
   const [pagination, setPagination] = useState(null)
+  const [showArchived, setShowArchived] = useState(false)
 
 
   const loadClients = useCallback(async (page = 1) => {
@@ -20,7 +21,13 @@ function Clients() {
     setMessage('')
 
     try {
-      const response = await apiRequest(`/api/clients?per_page=25&page=${page}`)
+      const response = await apiRequest(`/api/clients?per_page=25&page=${page}&archived=${showArchived ? 1 : 0}`)
+      if (!Array.isArray(response) && response.data.length === 0 && response.current_page > 1) {
+        const previous = await apiRequest(`/api/clients?per_page=25&page=${response.current_page - 1}&archived=${showArchived ? 1 : 0}`)
+        setClients(previous.data)
+        setPagination(previous)
+        return
+      }
       setClients(Array.isArray(response) ? response : response.data)
       setPagination(Array.isArray(response) ? null : response)
     } catch (error) {
@@ -28,7 +35,7 @@ function Clients() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [showArchived])
 
   useEffect(() => {
     Promise.resolve().then(loadClients)
@@ -81,10 +88,9 @@ function Clients() {
         body: JSON.stringify(formData),
       })
 
-      setClients((currentClients) => editingClient
-        ? currentClients.map((currentClient) => currentClient.id === client.id ? client : currentClient)
-        : [client, ...currentClients])
+      if (!client.id) throw new Error('Réponse client invalide.')
       closeForm()
+      await loadClients(pagination?.current_page || 1)
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -92,15 +98,31 @@ function Clients() {
     }
   }
 
-  async function handleDelete(client) {
-    if (!window.confirm(`Supprimer le client ${client.name} ?`)) return
-
+  async function handleArchive(client) {
+    if (!window.confirm(`Archiver le client ${client.name} ? Ses documents et règlements seront conservés.`)) return
+    setIsSubmitting(true)
     try {
       await apiRequest(`/api/clients/${client.id}`, { method: 'DELETE' })
-      setClients((currentClients) => currentClients.filter((item) => item.id !== client.id))
-      setMessage('Client supprimé avec succès.')
+      if (editingClient?.id === client.id) closeForm()
+      await loadClients(pagination?.current_page || 1)
+      setMessage('Client archivé. Historique conservé.')
     } catch (error) {
       setMessage(error.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleRestore(client) {
+    setIsSubmitting(true)
+    try {
+      await apiRequest(`/api/clients/${client.id}/restore`, { method: 'PATCH' })
+      await loadClients(pagination?.current_page || 1)
+      setMessage('Client restauré.')
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -126,8 +148,9 @@ function Clients() {
       </form>}
 
       <section className="clients-panel">
-        <div className="clients-panel-heading"><div><h2>Liste des clients</h2><p>{pagination?.total ?? clients.length} client{(pagination?.total ?? clients.length) !== 1 ? 's' : ''}</p></div><button className="refresh-button" type="button" onClick={() => loadClients(pagination?.current_page || 1)}>Actualiser</button></div>
-        {isLoading ? <p className="empty-state">Chargement des clients...</p> : clients.length === 0 ? <p className="empty-state">Aucun client pour le moment. Ajoutez votre premier client.</p> : <div className="clients-table"><div className="client-row client-row-head"><span>CLIENT</span><span>E-MAIL</span><span>TÉLÉPHONE</span><span>VILLE</span><span>ACTIONS</span></div>{clients.map((client) => <div className="client-row" key={client.id}><strong>{client.name}</strong><span>{client.email || '—'}</span><span>{client.phone || '—'}</span><span>{client.city || '—'}</span><div className="client-actions"><button type="button" onClick={() => openEditForm(client)}>Modifier</button><button className="delete-button" type="button" onClick={() => handleDelete(client)}>Supprimer</button></div></div>)}</div>}
+        <label><input type="checkbox" checked={showArchived} onChange={(event) => { closeForm(); setShowArchived(event.target.checked) }} /> Afficher les clients archivés</label>
+        <div className="clients-panel-heading"><div><h2>{showArchived ? 'Clients archivés' : 'Clients actifs'}</h2><p>{pagination?.total ?? clients.length} client{(pagination?.total ?? clients.length) !== 1 ? 's' : ''}</p></div><button className="refresh-button" type="button" onClick={() => loadClients(pagination?.current_page || 1)}>Actualiser</button></div>
+        {isLoading ? <p className="empty-state">Chargement des clients...</p> : clients.length === 0 ? <p className="empty-state">Aucun client pour le moment. Ajoutez votre premier client.</p> : <div className="clients-table"><div className="client-row client-row-head"><span>CLIENT</span><span>E-MAIL</span><span>TÉLÉPHONE</span><span>VILLE</span><span>ACTIONS</span></div>{clients.map((client) => <div className="client-row" key={client.id}><strong>{client.name}</strong><span>{client.email || '—'}</span><span>{client.phone || '—'}</span><span>{client.city || '—'}</span><div className="client-actions">{showArchived ? <button type="button" disabled={isSubmitting} onClick={() => handleRestore(client)}>Restaurer</button> : <><button type="button" onClick={() => openEditForm(client)}>Modifier</button><button className="delete-button" type="button" disabled={isSubmitting} onClick={() => handleArchive(client)}>Archiver</button></>}</div></div>)}</div>}
         {pagination && pagination.last_page > 1 && <div className="clients-panel-heading"><button className="refresh-button" type="button" disabled={!pagination.prev_page_url} onClick={() => loadClients(pagination.current_page - 1)}>Précédent</button><span>Page {pagination.current_page} sur {pagination.last_page}</span><button className="refresh-button" type="button" disabled={!pagination.next_page_url} onClick={() => loadClients(pagination.current_page + 1)}>Suivant</button></div>}
       </section>
     </section>

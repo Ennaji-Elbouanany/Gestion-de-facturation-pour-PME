@@ -41,6 +41,7 @@ class PaymentController extends Controller
     public function store(Request $request, Invoice $invoice): JsonResponse
     {
         $this->ensureInvoiceBelongsToCompany($request, $invoice);
+        abort_if($invoice->archived_at !== null, 409, 'Restaurez le brouillon avant de gérer ses règlements.');
         abort_unless($invoice->status !== 'cancelled', 422, 'Impossible d’ajouter un paiement à une facture annulée.');
 
         $data = $request->validate([
@@ -78,6 +79,7 @@ class PaymentController extends Controller
     public function update(Request $request, Invoice $invoice, Payment $payment): JsonResponse
     {
         $this->ensurePaymentBelongsToInvoice($request, $invoice, $payment);
+        abort_if($invoice->archived_at !== null, 409, 'Restaurez le brouillon avant de gérer ses règlements.');
 
         $data = $request->validate([
             'amount' => ['sometimes', 'required', 'numeric', 'min:0.01'],
@@ -107,14 +109,8 @@ class PaymentController extends Controller
     public function destroy(Request $request, Invoice $invoice, Payment $payment): JsonResponse
     {
         $this->ensurePaymentBelongsToInvoice($request, $invoice, $payment);
-        $payment->delete();
 
-        $this->refreshInvoiceStatus($invoice);
-        $this->forgetCompanyCaches($invoice->company_id);
-
-        return response()->json([
-            'message' => 'Paiement supprimé avec succès.',
-        ]);
+        return response()->json(['message' => 'Un règlement enregistré doit être conservé et ne peut pas être supprimé.'], 409);
     }
 
     /**

@@ -139,8 +139,8 @@ function Quotes() {
     setEditingQuote(quote)
     setFormData({
       client_id: String(quote.client_id || ''),
-      quote_date: quote.quote_date || '',
-      valid_until: quote.valid_until || '',
+      quote_date: quote.quote_date?.slice(0, 10) || '',
+      valid_until: quote.valid_until?.slice(0, 10) || '',
       status: quote.status || 'draft',
       notes: quote.notes || '',
       items: quote.items.length > 0
@@ -211,13 +211,14 @@ function Quotes() {
     }
   }
 
-  async function handleDelete(quote) {
-    if (!window.confirm(`Supprimer le devis ${quote.quote_number} ?`)) return
-
+  async function handleArchive(quote) {
+    const action = quote.archived_at ? 'restore' : 'archive'
     try {
-      await apiRequest(`/api/quotes/${quote.id}`, { method: 'DELETE' })
-      setQuotes((currentQuotes) => currentQuotes.filter((item) => item.id !== quote.id))
-      setMessage('Devis supprimé avec succès.')
+      const updated = await apiRequest(`/api/quotes/${quote.id}/${action}`, { method: 'PATCH' })
+      setQuotes((current) => current.map((item) => item.id === updated.id ? updated : item))
+      closeForm()
+      closeItemsManager()
+      setMessage(action === 'archive' ? 'Brouillon archivé, historique conservé.' : 'Brouillon restauré.')
     } catch (error) {
       setMessage(error.message)
     }
@@ -380,7 +381,7 @@ function Quotes() {
         <div className="quote-form-heading"><div><h2>{editingQuote ? `Modifier le devis ${editingQuote.quote_number}` : 'Nouveau devis'}</h2><p>Les champs marqués sont nécessaires.</p></div><button className="close-button" type="button" onClick={closeForm} aria-label="Fermer">x</button></div>
 
         <div className="quote-form-grid">
-          <label>Client *<select name="client_id" value={formData.client_id} onChange={handleChange} required><option value="">Selectionner un client</option>{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>
+          <label>Client *<select name="client_id" value={formData.client_id} onChange={handleChange} required><option value="">Selectionner un client</option>{editingQuote?.client?.deleted_at && !clients.some((client) => String(client.id) === String(editingQuote.client_id)) && <option value={editingQuote.client_id}>{editingQuote.client.name} (archivé)</option>}{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>
           <label>Date du devis *<input name="quote_date" type="date" value={formData.quote_date} onChange={handleChange} required /></label>
           <label>Valide jusqu au<input name="valid_until" type="date" value={formData.valid_until} onChange={handleChange} /></label>
           <label>Statut<select name="status" value={formData.status} onChange={handleChange}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
@@ -418,7 +419,8 @@ function Quotes() {
 
       {selectedQuote && <section className="quotes-panel">
         <div className="quotes-panel-heading"><div><h2>Lignes du devis {selectedQuote.quote_number}</h2><p>{quoteItems.length} lignes via API quote_items dediee</p></div><div><button className="refresh-button" type="button" onClick={() => loadQuoteItems(selectedQuote.id)}>Actualiser</button> <button className="cancel-button" type="button" onClick={closeItemsManager}>Fermer</button></div></div>
-        <form className="quote-form" onSubmit={handleItemSubmit}>
+        {selectedQuote.archived_at && <p role="status">Brouillon archivé : consultation uniquement. Restaurez-le pour modifier ses lignes.</p>}
+        {!selectedQuote.archived_at && <form className="quote-form" onSubmit={handleItemSubmit}>
           <div className="quote-form-heading"><div><h2>{editingItem ? 'Modifier la ligne' : 'Nouvelle ligne'}</h2><p>Ajout direct via POST et PUT sur /api/quotes/{selectedQuote.id}/items.</p></div>{editingItem && <button className="close-button" type="button" onClick={cancelEditItem} aria-label="Annuler">x</button>}</div>
           <div className="quote-items-table">
             <div className="quote-item-row quote-item-head"><span>PRODUIT</span><span>DESCRIPTION</span><span>QTE</span><span>PRIX UNITAIRE</span><span>TVA %</span><span>MONTANT</span><span /></div>
@@ -433,13 +435,13 @@ function Quotes() {
             </div>
           </div>
           <div className="quote-form-actions">{editingItem && <button className="cancel-button" type="button" onClick={cancelEditItem}>Annuler</button>}<button className="primary-button" type="submit" disabled={isItemSubmitting}>{isItemSubmitting ? 'Enregistrement...' : editingItem ? 'Mettre a jour' : 'Ajouter la ligne'}</button></div>
-        </form>
-        {isItemsLoading ? <p className="empty-state">Chargement des lignes...</p> : quoteItems.length === 0 ? <p className="empty-state">Aucune ligne pour ce devis.</p> : <div className="table-scroll"><table className="data-table quote-lines-table"><thead><tr><th>DESCRIPTION</th><th>PRODUIT</th><th>QTÉ</th><th className="num">PRIX UNITAIRE</th><th>TVA</th><th className="num">TOTAL</th><th className="actions-col">ACTIONS</th></tr></thead><tbody>{quoteItems.map((item) => <tr key={item.id}><td><strong>{item.description}</strong></td><td>{item.product ? item.product.name : '-'}</td><td>{item.quantity}</td><td className="num">{formatPrice(item.unit_price)}</td><td>{item.tax_rate ? `${item.tax_rate} %` : '-'}</td><td className="num"><strong>{formatPrice(item.total)}</strong></td><td className="actions-cell"><div className="quote-actions"><button type="button" onClick={() => startEditItem(item)}>Modifier</button><button className="delete-button" type="button" onClick={() => handleItemDelete(item)}>Supprimer</button></div></td></tr>)}</tbody></table></div>}
+        </form>}
+        {isItemsLoading ? <p className="empty-state">Chargement des lignes...</p> : quoteItems.length === 0 ? <p className="empty-state">Aucune ligne pour ce devis.</p> : <div className="table-scroll"><table className="data-table quote-lines-table"><thead><tr><th>DESCRIPTION</th><th>PRODUIT</th><th>QTÉ</th><th className="num">PRIX UNITAIRE</th><th>TVA</th><th className="num">TOTAL</th><th className="actions-col">ACTIONS</th></tr></thead><tbody>{quoteItems.map((item) => <tr key={item.id}><td><strong>{item.description}</strong></td><td>{item.product ? item.product.name : '-'}</td><td>{item.quantity}</td><td className="num">{formatPrice(item.unit_price)}</td><td>{item.tax_rate ? `${item.tax_rate} %` : '-'}</td><td className="num"><strong>{formatPrice(item.total)}</strong></td><td className="actions-cell"><div className="quote-actions"><button type="button" disabled={Boolean(selectedQuote.archived_at)} onClick={() => startEditItem(item)}>Modifier</button><button className="delete-button" type="button" disabled={Boolean(selectedQuote.archived_at)} onClick={() => handleItemDelete(item)}>Supprimer</button></div></td></tr>)}</tbody></table></div>}
       </section>}
 
       <section className="quotes-panel">
-        <div className="quotes-panel-heading"><div><h2>Liste des devis</h2><p>{quotes.length} devis</p></div><button className="refresh-button" type="button" onClick={loadQuotes}>Actualiser</button></div>
-        {isLoading ? <p className="empty-state">Chargement des devis...</p> : quotes.length === 0 ? <p className="empty-state">Aucun devis pour le moment. Créez votre premier devis.</p> : <div className="table-scroll"><table className="data-table quotes-table"><thead><tr><th className="ref">RÉFÉRENCE</th><th>CLIENT</th><th>DATE</th><th>ÉCHÉANCE</th><th className="num">HT</th><th className="num">TVA</th><th className="num">TTC</th><th className="center">STATUT</th><th className="actions-col">ACTIONS</th></tr></thead><tbody>{quotes.map((quote) => <tr key={quote.id}><td className="ref"><strong title={quote.quote_number}>{quote.quote_number}</strong></td><td><span className="truncate" title={quote.client ? quote.client.name : '-'}>{quote.client ? quote.client.name : '-'}</span></td><td className="date">{formatDate(quote.quote_date)}</td><td className="date">{formatDate(quote.valid_until)}</td><td className="num">{formatPrice(quote.subtotal)}</td><td className="num">{formatPrice(quote.tax_amount)}</td><td className="num ttc"><strong>{formatPrice(quote.total_amount)}</strong></td><td className="center"><select className={`status-select status-${quote.status}`} value={quote.status} onChange={(event) => handleStatusChange(quote, event.target.value)}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td className="actions-cell"><div className="quote-actions"><button type="button" onClick={() => openEditForm(quote)}>Modifier</button><button type="button" onClick={() => openItemsManager(quote)}>Lignes</button>{quote.status !== 'converted' && <button className="convert-button" type="button" onClick={() => handleConvertToInvoice(quote)}>Convertir</button>}<button className="delete-button" type="button" onClick={() => handleDelete(quote)}>Supprimer</button></div></td></tr>)}</tbody></table></div>}
+        <div className="quotes-panel-heading"><div><h2>Liste des devis</h2><p>Documents conservés. Les brouillons peuvent être archivés et restaurés.</p><p>{quotes.length} devis</p></div><button className="refresh-button" type="button" onClick={loadQuotes}>Actualiser</button></div>
+        {isLoading ? <p className="empty-state">Chargement des devis...</p> : quotes.length === 0 ? <p className="empty-state">Aucun devis pour le moment. Créez votre premier devis.</p> : <div className="table-scroll"><table className="data-table quotes-table"><thead><tr><th className="ref">RÉFÉRENCE</th><th>CLIENT</th><th>DATE</th><th>ÉCHÉANCE</th><th className="num">HT</th><th className="num">TVA</th><th className="num">TTC</th><th className="center">STATUT</th><th className="actions-col">ACTIONS</th></tr></thead><tbody>{quotes.map((quote) => <tr key={quote.id}><td className="ref"><strong title={quote.quote_number}>{quote.quote_number}{quote.archived_at && <small> — Brouillon archivé</small>}</strong></td><td><span className="truncate" title={quote.client ? quote.client.name : '-'}>{quote.client ? quote.client.name : '-'}</span></td><td className="date">{formatDate(quote.quote_date)}</td><td className="date">{formatDate(quote.valid_until)}</td><td className="num">{formatPrice(quote.subtotal)}</td><td className="num">{formatPrice(quote.tax_amount)}</td><td className="num ttc"><strong>{formatPrice(quote.total_amount)}</strong></td><td className="center"><select className={`status-select status-${quote.status}`} disabled={Boolean(quote.archived_at)} aria-label="Statut du document" value={quote.status} onChange={(event) => handleStatusChange(quote, event.target.value)}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td><td className="actions-cell"><div className="quote-actions"><button type="button" disabled={Boolean(quote.archived_at)} onClick={() => openEditForm(quote)}>Modifier</button><button type="button" onClick={() => openItemsManager(quote)}>Lignes</button>{!quote.archived_at && quote.status !== 'converted' && <button className="convert-button" type="button" onClick={() => handleConvertToInvoice(quote)}>Convertir</button>}{quote.status === 'draft' && <button type="button" onClick={() => handleArchive(quote)}>{quote.archived_at ? 'Restaurer' : 'Archiver'}</button>}</div></td></tr>)}</tbody></table></div>}
       </section>
     </section>
   )

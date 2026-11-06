@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ArchivesDrafts;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Quote;
@@ -15,6 +16,8 @@ use Illuminate\Validation\Rule;
 
 class QuoteController extends Controller
 {
+    use ArchivesDrafts;
+
     public function index(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;
@@ -22,7 +25,7 @@ class QuoteController extends Controller
             CompanyCache::key($companyId, CompanyCache::QUOTES),
             now()->addMinutes(2),
             fn () => Quote::where('company_id', $companyId)
-                ->with(['client:id,name', 'items'])
+                ->with(['client:id,name,deleted_at', 'items'])
                 ->latest()
                 ->get()
         );
@@ -48,7 +51,7 @@ class QuoteController extends Controller
 
             $this->syncItems($quote, $data['items']);
 
-            return $quote->fresh(['client:id,name', 'items']);
+            return $quote->fresh(['client:id,name,deleted_at', 'items']);
         });
 
         $this->forgetCompanyCaches($request->user()->company_id);
@@ -60,14 +63,15 @@ class QuoteController extends Controller
     {
         $this->ensureBelongsToCompany($request, $quote);
 
-        return response()->json($quote->load(['client:id,name,email,phone,address,city,country', 'items']));
+        return response()->json($quote->load(['client:id,name,email,phone,address,city,country,deleted_at', 'items']));
     }
 
     public function update(Request $request, Quote $quote): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $quote);
+        abort_if($quote->archived_at !== null, 409, 'Restaurez le brouillon avant de le modifier.');
 
-        $data = $this->validateQuote($request, true);
+        $data = $this->validateQuote($request, true, $quote->client_id);
 
         $quote = DB::transaction(function () use ($quote, $data) {
             $quote->update([
@@ -82,7 +86,7 @@ class QuoteController extends Controller
                 $this->syncItems($quote, $data['items']);
             }
 
-            return $quote->fresh(['client:id,name', 'items']);
+            return $quote->fresh(['client:id,name,deleted_at', 'items']);
         });
 
         $this->forgetCompanyCaches($request->user()->company_id);
@@ -93,17 +97,24 @@ class QuoteController extends Controller
     public function destroy(Request $request, Quote $quote): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $quote);
-        $quote->delete();
-        $this->forgetCompanyCaches($request->user()->company_id);
 
-        return response()->json([
-            'message' => 'Devis supprimé avec succès.',
-        ]);
+        return response()->json(['message' => 'Ce document doit être conservé. Vous pouvez archiver un brouillon.'], 409);
+    }
+
+    public function archive(Request $request, Quote $quote): JsonResponse
+    {
+        return $this->changeDraftArchive($request, $quote, true);
+    }
+
+    public function restore(Request $request, Quote $quote): JsonResponse
+    {
+        return $this->changeDraftArchive($request, $quote, false);
     }
 
     public function updateStatus(Request $request, Quote $quote): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $quote);
+        abort_if($quote->archived_at !== null, 409, 'Restaurez le brouillon avant de le modifier.');
 
         $data = $request->validate([
             'status' => ['required', 'string', 'in:draft,sent,accepted,rejected,expired,converted'],
@@ -112,12 +123,13 @@ class QuoteController extends Controller
         $quote->update(['status' => $data['status']]);
         $this->forgetCompanyCaches($request->user()->company_id);
 
-        return response()->json($quote->fresh(['client:id,name', 'items']));
+        return response()->json($quote->fresh(['client:id,name,deleted_at', 'items']));
     }
 
     public function convertToInvoice(Request $request, Quote $quote): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $quote);
+        abort_if($quote->archived_at !== null, 409, 'Restaurez le brouillon avant de le modifier.');
 
         if ($quote->status === 'converted') {
             return response()->json([
@@ -156,7 +168,7 @@ class QuoteController extends Controller
 
             $quote->update(['status' => 'converted']);
 
-            return $invoice->fresh(['client:id,name', 'items']);
+            return $invoice->fresh(['client:id,name,deleted_at', 'items']);
         });
 
         $this->forgetCompanyCaches(
@@ -167,12 +179,19 @@ class QuoteController extends Controller
         return response()->json($invoice, 201);
     }
 
-    private function validateQuote(Request $request, bool $partial = false): array
+    private function validateQuote(Request $request, bool $partial = false, ?int $existingClientId = null): array
     {
         $companyId = $request->user()->company_id;
 
         $rules = [
-            'client_id' => ['required', 'integer', Rule::exists('clients', 'id')->where('company_id', $companyId)],
+            'client_id' => ['required', 'integer', Rule::exists('clients', 'id')->where(function ($query) use ($companyId, $existingClientId) {
+                $query->where('company_id', $companyId)->where(function ($clients) use ($existingClientId) {
+                    $clients->whereNull('deleted_at');
+                    if ($existingClientId !== null) {
+                        $clients->orWhere('id', $existingClientId);
+                    }
+                });
+            })],
             'quote_date' => ['required', 'date'],
             'valid_until' => ['nullable', 'date', 'after_or_equal:quote_date'],
             'status' => ['sometimes', 'string', 'in:draft,sent,accepted,rejected,expired,converted'],

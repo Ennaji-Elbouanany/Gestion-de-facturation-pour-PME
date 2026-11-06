@@ -12,7 +12,12 @@ class ClientController extends Controller
     public function index(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;
+        $request->validate(['archived' => ['sometimes', 'boolean']]);
+        $archived = $request->boolean('archived');
         $query = Client::where('company_id', $companyId)->latest();
+        if ($archived) {
+            return response()->json($query->onlyTrashed()->paginate(max(1, min((int) $request->input('per_page', 25), 100))));
+        }
 
         if ($request->filled('per_page')) {
             $perPage = max(1, min((int) $request->input('per_page'), 100));
@@ -81,12 +86,25 @@ class ClientController extends Controller
     public function destroy(Request $request, Client $client): JsonResponse
     {
         $this->ensureBelongsToCompany($request, $client);
-        $client->delete();
+        if (! $client->trashed()) {
+            $client->delete();
+        }
         $this->forgetCompanyCaches($request->user()->company_id);
 
         return response()->json([
-            'message' => 'Client supprimé avec succès.',
+            'message' => 'Client archivé. Ses documents et règlements sont conservés.',
         ]);
+    }
+
+    public function restore(Request $request, Client $client): JsonResponse
+    {
+        $this->ensureBelongsToCompany($request, $client);
+        if ($client->trashed()) {
+            $client->restore();
+        }
+        $this->forgetCompanyCaches($request->user()->company_id);
+
+        return response()->json(['message' => 'Client restauré.', 'client' => $client->fresh()]);
     }
 
     private function ensureBelongsToCompany(Request $request, Client $client): void

@@ -3,11 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use LogicException;
 
 class Client extends Model
 {
+    use SoftDeletes;
 
+    protected static function booted(): void
+    {
+        static::deleting(function (Client $client): void {
+            if ($client->isForceDeleting()) {
+                throw new LogicException('Un client doit être archivé, jamais supprimé définitivement.');
+            }
+        });
+    }
 
     protected $fillable = [
         'company_id',

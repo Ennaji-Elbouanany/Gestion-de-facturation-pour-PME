@@ -273,10 +273,10 @@ function Overview({ user: initialUser, onNavigate }) {
         client: payment.invoice?.client || null,
       }))
 
-      setInvoices(Array.isArray(invoicesData) ? invoicesData : [])
+      setInvoices(Array.isArray(invoicesData) ? invoicesData.filter((invoice) => !invoice.archived_at) : [])
       setClients(Array.isArray(clientsData) ? clientsData : [])
       setProducts(Array.isArray(productsData) ? productsData : [])
-      setQuotes(Array.isArray(quotesData) ? quotesData : [])
+      setQuotes(Array.isArray(quotesData) ? quotesData.filter((quote) => !quote.archived_at) : [])
       setPayments(allPayments)
     } catch (err) {
       setError(err.message)

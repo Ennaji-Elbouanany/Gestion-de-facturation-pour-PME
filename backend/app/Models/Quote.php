@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\PreventsPhysicalDeletion;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Quote extends Model
 {
-    use HasFactory;
+    use HasFactory, PreventsPhysicalDeletion;
 
     protected $fillable = [
         'company_id',
@@ -31,6 +33,7 @@ class Quote extends Model
         return [
             'quote_date' => 'date',
             'valid_until' => 'date',
+            'archived_at' => 'datetime',
             'subtotal' => 'decimal:2',
             'tax_amount' => 'decimal:2',
             'discount_amount' => 'decimal:2',
@@ -45,7 +48,7 @@ class Quote extends Model
 
     public function client(): BelongsTo
     {
-        return $this->belongsTo(Client::class);
+        return $this->belongsTo(Client::class)->withTrashed();
     }
 
     public function user(): BelongsTo

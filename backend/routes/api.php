@@ -21,13 +21,18 @@ Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logo
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
-    Route::apiResource('clients', ClientController::class);
+    Route::patch('/clients/{client}/restore', [ClientController::class, 'restore'])->withTrashed();
+    Route::apiResource('clients', ClientController::class)->withTrashed(['destroy']);
     Route::apiResource('products', ProductController::class);
     Route::apiResource('invoices', InvoiceController::class);
+    Route::patch('/invoices/{invoice}/archive', [InvoiceController::class, 'archive']);
+    Route::patch('/invoices/{invoice}/restore', [InvoiceController::class, 'restore']);
     Route::patch('/invoices/{invoice}/status', [InvoiceController::class, 'updateStatus']);
     Route::apiResource('invoices.payments', PaymentController::class)->scoped()->parameters(['payments' => 'payment']);
     Route::get('/payments', [PaymentController::class, 'all']);
     Route::apiResource('quotes', QuoteController::class);
+    Route::patch('/quotes/{quote}/archive', [QuoteController::class, 'archive']);
+    Route::patch('/quotes/{quote}/restore', [QuoteController::class, 'restore']);
     Route::patch('/quotes/{quote}/status', [QuoteController::class, 'updateStatus']);
     Route::post('/quotes/{quote}/convert', [QuoteController::class, 'convertToInvoice']);
     Route::apiResource('quotes.items', QuoteItemController::class)->scoped(['item' => 'quoteItem'])->parameters(['items' => 'quoteItem']);

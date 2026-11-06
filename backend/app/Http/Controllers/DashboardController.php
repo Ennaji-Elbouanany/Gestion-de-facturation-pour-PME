@@ -23,8 +23,8 @@ class DashboardController extends Controller
             fn () => [
                 'clients_count' => Client::where('company_id', $companyId)->count(),
                 'products_count' => Product::where('company_id', $companyId)->count(),
-                'invoices_count' => Invoice::where('company_id', $companyId)->count(),
-                'quotes_count' => Quote::where('company_id', $companyId)->count(),
+                'invoices_count' => Invoice::where('company_id', $companyId)->whereNull('archived_at')->count(),
+                'quotes_count' => Quote::where('company_id', $companyId)->whereNull('archived_at')->count(),
                 'payments_count' => Payment::whereHas(
                     'invoice',
                     fn ($query) => $query->where('company_id', $companyId)

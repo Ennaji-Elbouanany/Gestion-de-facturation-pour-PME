@@ -1,46 +1,51 @@
 name: Deploy Production
 
 on:
-  workflow_run:
-    workflows:
-      - Continuous Integration
-    types:
-      - completed
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Full 40-character SHA on main with successful CI
+        required: true
+        type: string
+      confirmation:
+        description: Type DEPLOY to approve this delivery (no database migration)
+        required: true
+        type: string
 
 permissions:
   contents: read
+  actions: read
+  deployments: read
+
+concurrency:
+  group: production-release
+  cancel-in-progress: false
 
 jobs:
   deploy:
-    name: Deploy backend and frontend to Render
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
-    runs-on: ubuntu-latest
+    name: Controlled production delivery
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
     environment: production
-
     steps:
-      - name: Checkout tested commit
-        uses: actions/checkout@v4
+      # Execute trusted deployment tooling from main, never scripts from an input ref.
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-
-      - name: Deploy Laravel backend to Render
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate and deliver the approved commit
         env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-        run: |
-          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
-            echo "RENDER_DEPLOY_HOOK_URL is not configured."
-            exit 1
-          fi
-          curl --fail --silent --show-error --request POST "$RENDER_DEPLOY_HOOK_URL"
-
-      - name: Deploy frontend Static Site to Render
-        env:
-          RENDER_FRONTEND_DEPLOY_HOOK_URL: ${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK_URL }}
-        run: |
-          if [ -z "$RENDER_FRONTEND_DEPLOY_HOOK_URL" ]; then
-            echo "RENDER_FRONTEND_DEPLOY_HOOK_URL is not configured."
-            exit 1
-          fi
-          curl --fail --silent --show-error --request POST "$RENDER_FRONTEND_DEPLOY_HOOK_URL"
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_SHA: ${{ inputs.commit_sha }}
+          DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_BACKEND_SERVICE_ID: ${{ vars.RENDER_BACKEND_SERVICE_ID }}
+          RENDER_FRONTEND_SERVICE_ID: ${{ vars.RENDER_FRONTEND_SERVICE_ID }}
+          BACKEND_URL: ${{ vars.BACKEND_URL }}
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+          REQUIRE_PRODUCTION_REVIEW: ${{ vars.REQUIRE_PRODUCTION_REVIEW || 'true' }}
+        run: python scripts/ops/deploy.py

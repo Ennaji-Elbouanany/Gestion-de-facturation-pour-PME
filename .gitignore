@@ -5,3 +5,6 @@ frontEnd/.env
 frontEnd/node_modules/
 frontEnd/dist/
 backend/storage/logs/*
+# Local Python tooling artifacts
+__pycache__/
+*.py[cod]

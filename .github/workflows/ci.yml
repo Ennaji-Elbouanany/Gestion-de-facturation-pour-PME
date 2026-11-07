@@ -131,4 +131,24 @@ jobs:
         run: npm run lint
 
       - name: Build frontend
+        env:
+          RELEASE_SHA: ${{ github.sha }}
         run: npm run build
+
+  deployment-safeguards:
+    name: Deployment safeguards and Docker
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test deployment failure paths without network access
+        run: python -m unittest discover -s scripts/ops/tests -v
+      - name: Validate GitHub Actions configuration
+        run: docker run --rm -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:1.7.7 -color
+      - name: Build production image without production secrets
+        run: docker build --build-arg RELEASE_SHA="$GITHUB_SHA" -t billing-ci:test backend
+      - name: Verify container over HTTP on an isolated database
+        run: python scripts/ops/smoke_container.py billing-ci:test "$GITHUB_SHA"

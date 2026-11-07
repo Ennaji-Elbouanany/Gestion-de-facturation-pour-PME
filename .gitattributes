@@ -1,0 +1,6 @@
+
+# Container entrypoints must remain executable on Linux after Windows checkouts.
+backend/docker/*.sh text eol=lf
+backend/docker/*.conf text eol=lf
+backend/docker/*.ini text eol=lf
+backend/Dockerfile text eol=lf

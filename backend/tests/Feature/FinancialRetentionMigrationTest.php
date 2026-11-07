@@ -71,8 +71,8 @@ class FinancialRetentionMigrationTest extends TestCase
         DB::table('products')->where('id', $product)->delete();
         $this->assertDatabaseHas('invoice_items', ['invoice_id' => $invoice, 'product_id' => null, 'total' => 10]);
         $this->assertDatabaseHas('quote_items', ['quote_id' => $quote, 'product_id' => null, 'total' => 10]);
-        $this->assertTrue(Schema::hasIndex('invoices', ['invoice_number'], 'unique'));
-        $this->assertTrue(Schema::hasIndex('quotes', ['quote_number'], 'unique'));
+        $this->assertTrue(Schema::hasIndex('invoices', ['company_id', 'invoice_number'], 'unique'));
+        $this->assertTrue(Schema::hasIndex('quotes', ['company_id', 'quote_number'], 'unique'));
         $this->assertTrue(Schema::hasIndex('invoices', ['archived_at']));
     }
 

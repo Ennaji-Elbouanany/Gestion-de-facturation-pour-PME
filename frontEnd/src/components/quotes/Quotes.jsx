@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { documentTotals, lineTotals } from '../../services/money'
 import { apiRequest } from '../../services/api'
+import { convertQuote, quoteTransitions } from '../../services/quoteWorkflow'
 import { usePermissions } from '../../hooks/usePermissions'
 import './Quotes.css'
 
@@ -27,6 +28,9 @@ const statusLabels = {
 function Quotes() {
   const { can } = usePermissions()
   const [quotes, setQuotes] = useState([])
+  const [convertingQuoteId, setConvertingQuoteId] = useState(null)
+  const conversionBusy = useRef(false)
+  const [linkedInvoice, setLinkedInvoice] = useState(null)
   const [clients, setClients] = useState([])
   const [products, setProducts] = useState([])
   const [formData, setFormData] = useState(emptyForm)
@@ -217,6 +221,9 @@ function Quotes() {
         body: JSON.stringify({ status }),
       })
       setQuotes((currentQuotes) => currentQuotes.map((currentQuote) => currentQuote.id === updatedQuote.id ? updatedQuote : currentQuote))
+      setSelectedQuote((current) => current?.id === updatedQuote.id ? updatedQuote : current)
+      if (selectedQuote?.id === updatedQuote.id) setQuoteItems(updatedQuote.items)
+      if (editingQuote?.id === updatedQuote.id) closeForm()
       setMessage('Statut mis à jour avec succès.')
     } catch (error) {
       setMessage(error.message)
@@ -224,12 +231,28 @@ function Quotes() {
   }
 
   async function handleConvertToInvoice(quote) {
+    if (conversionBusy.current || !can('quotes.convert', quote)) return
     if (!window.confirm(`Convertir le devis ${quote.quote_number} en facture ?`)) return
-
+    conversionBusy.current = true
+    setConvertingQuoteId(quote.id)
     try {
-      const invoice = await apiRequest(`/api/quotes/${quote.id}/convert`, { method: 'POST' })
-      setQuotes((currentQuotes) => currentQuotes.map((currentQuote) => currentQuote.id === quote.id ? { ...currentQuote, status: 'converted' } : currentQuote))
-      setMessage(`Devis converti en facture ${invoice.invoice_number} avec succès.`)
+      const invoice = await convertQuote(apiRequest, quote.id, (result) => {
+        const update = (current) => current?.id === quote.id ? { ...current, status: 'converted', invoice: result } : current
+        setQuotes((current) => current.map(update))
+        setSelectedQuote(update)
+      })
+      setMessage(`Facture associée : ${invoice.invoice_number}.`)
+    } catch (error) {
+      setMessage(error.message)
+    } finally {
+      conversionBusy.current = false
+      setConvertingQuoteId(null)
+    }
+  }
+
+  async function showLinkedInvoice(quote) {
+    try {
+      setLinkedInvoice(await apiRequest(`/api/invoices/${quote.invoice.id}`))
     } catch (error) {
       setMessage(error.message)
     }
@@ -365,6 +388,13 @@ function Quotes() {
 
       {message && <p className="quotes-message" role="alert">{message}</p>}
 
+      {linkedInvoice && <section className="quotes-panel">
+        <h2>Facture {linkedInvoice.invoice_number}</h2>
+        <button type="button" onClick={() => setLinkedInvoice(null)}>Fermer</button>
+        <p>{linkedInvoice.client?.name} — {formatPrice(linkedInvoice.total_amount)}</p>
+        <ul>{linkedInvoice.items.map((item) => <li key={item.id}>{item.description} : {item.quantity} × {item.unit_price} — {item.total}</li>)}</ul>
+      </section>}
+
       {isFormOpen && <form className="quote-form" onSubmit={handleSubmit}>
         <div className="quote-form-heading"><div><h2>{editingQuote ? `Modifier le devis ${editingQuote.quote_number}` : 'Nouveau devis'}</h2><p>Les champs marqués sont nécessaires.</p></div><button className="close-button" type="button" onClick={closeForm} aria-label="Fermer">x</button></div>
 
@@ -372,7 +402,7 @@ function Quotes() {
           <label>Client *<select name="client_id" value={formData.client_id} onChange={handleChange} required><option value="">Selectionner un client</option>{editingQuote?.client?.deleted_at && !clients.some((client) => String(client.id) === String(editingQuote.client_id)) && <option value={editingQuote.client_id}>{editingQuote.client.name} (archivé)</option>}{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>
           <label>Date du devis *<input name="quote_date" type="date" value={formData.quote_date} onChange={handleChange} required /></label>
           <label>Valide jusqu au<input name="valid_until" type="date" value={formData.valid_until} onChange={handleChange} /></label>
-          <label>Statut<select name="status" value={formData.status} onChange={handleChange}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value} disabled={value === 'converted' && !can('quotes.convert')}>{label}</option>)}</select></label>
+          <label>Statut<select name="status" value={formData.status} onChange={handleChange}>{Object.entries(statusLabels).filter(([value]) => ['draft', 'sent'].includes(value)).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         </div>
 
         <div className="quote-items-section">
@@ -431,7 +461,7 @@ function Quotes() {
 
       <section className="quotes-panel">
         <div className="quotes-panel-heading"><div><h2>Liste des devis</h2><p>Documents conservés. Les brouillons peuvent être archivés et restaurés.</p><p>{quotes.length} devis</p></div><button className="refresh-button" type="button" onClick={loadQuotes}>Actualiser</button></div>
-        {isLoading ? <p className="empty-state">Chargement des devis...</p> : quotes.length === 0 ? <p className="empty-state">Aucun devis pour le moment. Créez votre premier devis.</p> : <div className="table-scroll"><table className="data-table quotes-table"><thead><tr><th className="ref">RÉFÉRENCE</th><th>CLIENT</th><th>DATE</th><th>ÉCHÉANCE</th><th className="num">HT</th><th className="num">TVA</th><th className="num">TTC</th><th className="center">STATUT</th><th className="actions-col">ACTIONS</th></tr></thead><tbody>{quotes.map((quote) => <tr key={quote.id}><td className="ref"><strong title={quote.quote_number}>{quote.quote_number}{quote.archived_at && <small> — Brouillon archivé</small>}</strong></td><td><span className="truncate" title={quote.client ? quote.client.name : '-'}>{quote.client ? quote.client.name : '-'}</span></td><td className="date">{formatDate(quote.quote_date)}</td><td className="date">{formatDate(quote.valid_until)}</td><td className="num">{formatPrice(quote.subtotal)}</td><td className="num">{formatPrice(quote.tax_amount)}</td><td className="num ttc"><strong>{formatPrice(quote.total_amount)}</strong></td><td className="center">{can('quotes.updateStatus', quote) ? <select className={`status-select status-${quote.status}`} disabled={Boolean(quote.archived_at)} aria-label="Statut du document" value={quote.status} onChange={(event) => handleStatusChange(quote, event.target.value)}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value} disabled={value === 'converted' && !can('quotes.convert')}>{label}</option>)}</select> : <span>{statusLabels[quote.status] || quote.status}</span>}</td><td className="actions-cell"><div className="quote-actions">{can('quotes.update', quote) && <button type="button" disabled={Boolean(quote.archived_at)} onClick={() => openEditForm(quote)}>Modifier</button>}<button type="button" onClick={() => openItemsManager(quote)}>Lignes</button>{can('quotes.convert', quote) && <button className="convert-button" type="button" onClick={() => handleConvertToInvoice(quote)}>Convertir</button>}{can(quote.archived_at ? 'quotes.restore' : 'quotes.archive', quote) && quote.status === 'draft' && <button type="button" onClick={() => handleArchive(quote)}>{quote.archived_at ? 'Restaurer' : 'Archiver'}</button>}</div></td></tr>)}</tbody></table></div>}
+        {isLoading ? <p className="empty-state">Chargement des devis...</p> : quotes.length === 0 ? <p className="empty-state">Aucun devis pour le moment. Créez votre premier devis.</p> : <div className="table-scroll"><table className="data-table quotes-table"><thead><tr><th className="ref">RÉFÉRENCE</th><th>CLIENT</th><th>DATE</th><th>ÉCHÉANCE</th><th className="num">HT</th><th className="num">TVA</th><th className="num">TTC</th><th className="center">STATUT</th><th className="actions-col">ACTIONS</th></tr></thead><tbody>{quotes.map((quote) => <tr key={quote.id}><td className="ref"><strong title={quote.quote_number}>{quote.quote_number}{quote.archived_at && <small> — Brouillon archivé</small>}</strong></td><td><span className="truncate" title={quote.client ? quote.client.name : '-'}>{quote.client ? quote.client.name : '-'}</span></td><td className="date">{formatDate(quote.quote_date)}</td><td className="date">{formatDate(quote.valid_until)}</td><td className="num">{formatPrice(quote.subtotal)}</td><td className="num">{formatPrice(quote.tax_amount)}</td><td className="num ttc"><strong>{formatPrice(quote.total_amount)}</strong></td><td className="center">{can('quotes.updateStatus', quote) ? <select className={`status-select status-${quote.status}`} disabled={Boolean(quote.archived_at)} aria-label="Statut du document" value={quote.status} onChange={(event) => handleStatusChange(quote, event.target.value)}>{[quote.status, ...quoteTransitions(quote)].map((value) => <option key={value} value={value}>{statusLabels[value]}</option>)}</select> : <span>{statusLabels[quote.status] || quote.status}</span>}</td><td className="actions-cell"><div className="quote-actions">{can('quotes.update', quote) && <button type="button" disabled={Boolean(quote.archived_at)} onClick={() => openEditForm(quote)}>Modifier</button>}<button type="button" onClick={() => openItemsManager(quote)}>Lignes</button>{can('quotes.convert', quote) && <button className="convert-button" type="button" disabled={convertingQuoteId !== null} onClick={() => handleConvertToInvoice(quote)}>{convertingQuoteId === quote.id ? 'Conversion...' : 'Convertir'}</button>}{quote.invoice && <button type="button" onClick={() => showLinkedInvoice(quote)}>Facture {quote.invoice.invoice_number}</button>}{can(quote.archived_at ? 'quotes.restore' : 'quotes.archive', quote) && quote.status === 'draft' && <button type="button" onClick={() => handleArchive(quote)}>{quote.archived_at ? 'Restaurer' : 'Archiver'}</button>}</div></td></tr>)}</tbody></table></div>}
       </section>
     </section>
   )

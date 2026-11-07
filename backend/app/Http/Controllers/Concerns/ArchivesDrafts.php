@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Concerns;
 
 use App\Models\Invoice;
 use App\Models\Quote;
+use App\Services\DocumentNumberService;
 use App\Services\FinancialTransaction;
 use App\Support\CompanyCache;
 use App\Support\InvoiceView;
@@ -17,6 +18,9 @@ trait ArchivesDrafts
         $this->ensureBelongsToCompany($request, $document);
         $this->authorize($archive ? 'archive' : 'restore', $document);
         $document = FinancialTransaction::run(function () use ($document, $archive) {
+            if ($document instanceof Quote) {
+                DocumentNumberService::company($document->company_id);
+            }
             $locked = $document->newQuery()->whereKey($document->id)->lockForUpdate()->firstOrFail();
             abort_unless(($locked instanceof Invoice ? $locked->document_status : $locked->status) === 'draft', 409, 'Seul un brouillon peut être archivé ou restauré.');
             if ($locked instanceof Invoice) {

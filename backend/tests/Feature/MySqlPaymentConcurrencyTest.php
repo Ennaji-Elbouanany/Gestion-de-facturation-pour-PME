@@ -11,11 +11,12 @@ use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\DB;
-use Symfony\Component\Process\Process;
+use Tests\Support\ConcurrentProcesses;
 use Tests\TestCase;
 
 class MySqlPaymentConcurrencyTest extends TestCase
 {
+    use ConcurrentProcesses;
     use DatabaseMigrations;
 
     private User $actor;
@@ -55,75 +56,12 @@ class MySqlPaymentConcurrencyTest extends TestCase
 
     private function race(array $requests): array
     {
-        $directory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'billing-'.bin2hex(random_bytes(8));
-        mkdir($directory);
-        $processes = [];
-        $config = config('database.connections.mysql');
-        $env = ['APP_ENV' => 'testing', 'APP_KEY' => config('app.key'), 'DB_CONNECTION' => 'mysql',
-            'DB_HOST' => $config['host'], 'DB_PORT' => (string) $config['port'], 'DB_DATABASE' => $config['database'],
-            'DB_USERNAME' => $config['username'], 'DB_PASSWORD' => $config['password'], 'DB_URL' => 'null', 'MYSQL_ATTR_SSL_CA' => 'null',
-            'CACHE_STORE' => 'array', 'SESSION_DRIVER' => 'array', 'MAIL_MAILER' => 'array'];
-        DB::beginTransaction();
-        try {
-            $this->invoice->newQuery()->whereKey($this->invoice->id)->lockForUpdate()->firstOrFail();
-            foreach ($requests as $index => [$paymentId, $amount]) {
-                $process = new Process([PHP_BINARY, base_path('tests/Support/payment_worker.php'), (string) $this->actor->id,
-                    (string) $this->invoice->id, (string) $paymentId, $amount, $directory.'/'.$index.'.ready', $directory.'/go'], base_path(), $env);
-                $process->setTimeout(20);
-                $process->start();
-                $processes[] = $process;
-            }
-            $deadline = microtime(true) + 12;
-            while (count(glob($directory.'/*.ready')) !== count($requests)) {
-                foreach ($processes as $process) {
-                    if (! $process->isRunning()) {
-                        $this->fail('Worker exited before synchronization: '.$process->getErrorOutput());
-                    }
-                }
-                if (microtime(true) > $deadline) {
-                    $this->fail('Workers failed to reach the synchronization barrier.');
-                }
-                usleep(10000);
-            }
-            file_put_contents($directory.'/go', 'go');
-            $deadline = microtime(true) + 5;
-            while (count(glob($directory.'/*.attempt')) !== count($requests)) {
-                if (microtime(true) > $deadline) {
-                    $this->fail('Workers did not attempt the financial operation.');
-                }
-                usleep(10000);
-            }
-            // Both workers must remain blocked behind the actual parent-row lock.
-            usleep(300000);
-            foreach ($processes as $process) {
-                $this->assertTrue($process->isRunning(), 'Worker bypassed the invoice lock.');
-            }
-            DB::commit();
-            $results = [];
-            foreach ($processes as $process) {
-                $process->wait();
-                $this->assertSame(0, $process->getExitCode(), $process->getErrorOutput());
-                $results[] = json_decode($process->getOutput(), true, 512, JSON_THROW_ON_ERROR)['status'];
-            }
-            sort($results);
+        $operations = array_map(fn ($request) => ['payment', $this->invoice->id, $request[0], $request[1]], $requests);
+        $results = $this->runConcurrent($operations, fn () => $this->invoice->newQuery()->whereKey($this->invoice->id)->lockForUpdate()->firstOrFail());
+        $statuses = array_column($results, 'status');
+        sort($statuses);
 
-            return $results;
-        } finally {
-            if (DB::transactionLevel() > 0) {
-                DB::rollBack();
-            }
-            foreach ($processes as $process) {
-                if ($process->isRunning()) {
-                    $process->stop(1);
-                }
-            }
-            if (str_starts_with(realpath($directory), realpath(sys_get_temp_dir()).DIRECTORY_SEPARATOR.'billing-')) {
-                foreach (glob($directory.'/*') as $file) {
-                    unlink($file);
-                }
-                rmdir($directory);
-            }
-        }
+        return $statuses;
     }
 
     public function test_two_simultaneous_payments_cannot_overpay(): void

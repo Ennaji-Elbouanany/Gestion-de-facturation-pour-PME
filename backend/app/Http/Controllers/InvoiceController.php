@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ArchivesDrafts;
-use App\Models\Company;
 use App\Models\Invoice;
+use App\Services\DocumentNumberService;
 use App\Services\FinancialTransaction;
 use App\Services\InvoiceService;
 use App\Services\MoneyCalculator;
@@ -12,7 +12,6 @@ use App\Support\CompanyCache;
 use App\Support\InvoiceView;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class InvoiceController extends Controller
@@ -38,7 +37,7 @@ class InvoiceController extends Controller
                 'company_id' => $request->user()->company_id,
                 'client_id' => $data['client_id'],
                 'user_id' => $request->user()->id,
-                'invoice_number' => $this->generateInvoiceNumber($request->user()->company_id),
+                'invoice_number' => DocumentNumberService::next($request->user()->company_id, 'invoice'),
                 'invoice_date' => $data['invoice_date'],
                 'due_date' => $data['due_date'] ?? null,
                 'status' => 'draft',
@@ -153,34 +152,6 @@ class InvoiceController extends Controller
         }
 
         return $request->validate($rules);
-    }
-
-    private function generateInvoiceNumber(int $companyId): string
-    {
-        // Le préfixe provient des paramètres de l'entreprise (Documents), sinon FAC-.
-        $company = Company::where('id', $companyId)->first();
-        $prefix = trim($company?->invoice_prefix ?? '');
-
-        if ($prefix === '') {
-            $prefix = 'FAC-';
-        }
-
-        // La colonne invoice_number est UNIQUE globalement en base : on ne peut
-        // pas compter par entreprise (deux sociétés produiraient FAC-2026-001).
-        // On dérive le prochain numéro du dernier numéro réellement utilisé.
-        $year = now()->format('Y');
-        $pattern = sprintf('%s%s-%%', $prefix, $year);
-        $last = Invoice::where('invoice_number', 'like', $pattern)
-            ->latest('invoice_number')
-            ->value('invoice_number');
-
-        $sequence = 1;
-
-        if ($last) {
-            $sequence = (int) Str::afterLast($last, '-') + 1;
-        }
-
-        return sprintf('%s%s-%03d', $prefix, $year, $sequence);
     }
 
     private function ensureBelongsToCompany(Request $request, Invoice $invoice): void

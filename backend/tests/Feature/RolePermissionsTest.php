@@ -44,8 +44,8 @@ class RolePermissionsTest extends TestCase
                 'invoice_number' => 'TEST-INV-'.$kind, 'invoice_date' => '2026-11-06', 'subtotal' => 100, 'tax_amount' => 20, 'total_amount' => 120,
                 'status' => $kind === 'sent' ? 'sent' : 'draft']);
             $estimate = Quote::create(['company_id' => $this->company->id, 'client_id' => $client->id,
-                'quote_number' => 'TEST-QUO-'.$kind, 'quote_date' => '2026-11-06', 'total_amount' => 120,
-                'status' => $kind === 'sent' ? 'sent' : 'draft']);
+                'quote_number' => 'TEST-QUO-'.$kind, 'quote_date' => '2026-11-06', 'subtotal' => 100, 'tax_amount' => 20, 'total_amount' => 120,
+                'status' => 'draft']);
             $document->items()->create(['description' => 'Line', 'quantity' => 1, 'unit_price' => 100, 'tax_rate' => 20, 'subtotal' => 100, 'total' => 120]);
             $estimate->items()->create(['description' => 'Line', 'quantity' => 1, 'unit_price' => 100, 'tax_rate' => 20, 'subtotal' => 100, 'total' => 120]);
             if ($kind === 'archive') {
@@ -56,6 +56,8 @@ class RolePermissionsTest extends TestCase
                 $archivedInvoice = $document;
                 $archivedQuote = $estimate;
             } elseif ($kind === 'sent') {
+                DB::table('quotes')->where('id', $estimate->id)->update(['status' => 'sent']);
+                $estimate->refresh();
                 $sentInvoice = $document;
                 $sentQuote = $estimate;
             } else {
@@ -127,9 +129,9 @@ class RolePermissionsTest extends TestCase
             'quote create' => ['POST', 'quotes', '', 'quote', [201, 201, 403]],
             'quote update' => ['PATCH', 'quote', '', 'notes', [200, 200, 403]],
             'quote status' => ['PATCH', 'quote', '/status', 'statusSent', [200, 200, 403]],
-            'quote forged conversion status' => ['PATCH', 'quote', '/status', 'converted', [200, 403, 403]],
-            'quote forged conversion patch' => ['PATCH', 'quote', '', 'converted', [200, 403, 403]],
-            'quote convert' => ['POST', 'quote', '/convert', null, [201, 403, 201]],
+            'quote forged conversion status' => ['PATCH', 'quote', '/status', 'converted', [422, 403, 403]],
+            'quote forged conversion patch' => ['PATCH', 'quote', '', 'converted', [422, 403, 403]],
+            'quote convert requires acceptance' => ['POST', 'quote', '/convert', null, [409, 403, 409]],
             'quote archive' => ['PATCH', 'quote', '/archive', null, [200, 200, 403]],
             'quote restore' => ['PATCH', 'archivedQuote', '/restore', null, [200, 200, 403]],
             'quote edit archived' => ['PATCH', 'archivedQuote', '', 'notes', [409, 409, 403]],
@@ -330,16 +332,15 @@ class RolePermissionsTest extends TestCase
         $this->assertSame($cached, Cache::get($key));
     }
 
-    public function test_employee_can_preserve_existing_converted_status_without_forging_a_conversion(): void
+    public function test_employee_cannot_edit_historical_converted_quote_or_forge_conversion(): void
     {
         $quote = Quote::where('status', 'sent')->firstOrFail();
-        $quote->status = 'converted';
-        $quote->save();
+        DB::table('quotes')->where('id', $quote->id)->update(['status' => 'converted']);
         $this->actor->role = 'employee';
         $this->actor->save();
         $this->actingAs($this->actor);
         $this->patchJson('/api/quotes/'.$quote->id, ['status' => 'converted', 'notes' => 'Same status'])
-            ->assertOk()->assertJsonPath('status', 'converted');
+            ->assertForbidden();
         $this->postJson('/api/quotes/'.$quote->id.'/convert')->assertForbidden();
     }
 

@@ -52,6 +52,8 @@ class Invoice extends Model
     protected static function booted(): void
     {
         static::updating(function (Invoice $invoice): void {
+            abort_if($invoice->isDirty('invoice_number'), 409, 'Le numéro de facture est permanent.');
+            abort_if($invoice->isDirty('source_quote_id'), 409, 'Le lien de conversion est permanent.');
             $state = $invoice->getRawOriginal('document_status') ?? match ($invoice->getRawOriginal('status')) {
                 'draft' => 'draft', 'cancelled' => 'cancelled', default => 'issued',
             };
@@ -63,6 +65,11 @@ class Invoice extends Model
                 abort(409, 'Une facture émise ne peut pas redevenir un brouillon.');
             }
         });
+    }
+
+    public function sourceQuote(): BelongsTo
+    {
+        return $this->belongsTo(Quote::class, 'source_quote_id');
     }
 
     public function company(): BelongsTo

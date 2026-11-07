@@ -37,7 +37,7 @@ class FinancialDataRetentionTest extends TestCase
 
     private function document(string $resource, string $status = 'draft'): array
     {
-        $legacy = $resource === 'invoices' && ! in_array($status, ['draft', 'sent'], true);
+        $legacy = ! in_array($status, ['draft', 'sent'], true);
         $document = $this->postJson('/api/'.$resource, [
             'client_id' => $this->client->id,
             $resource === 'invoices' ? 'invoice_date' : 'quote_date' => '2026-11-06',
@@ -46,7 +46,7 @@ class FinancialDataRetentionTest extends TestCase
         ])->assertCreated()->json();
         if ($legacy) {
             // Existing legacy rows remain preserved; the public API no longer accepts financial statuses.
-            DB::table('invoices')->where('id', $document['id'])->update(['status' => $status, 'document_status' => null]);
+            DB::table($resource)->where('id', $document['id'])->update($resource === 'invoices' ? ['status' => $status, 'document_status' => null] : ['status' => $status]);
         }
 
         return $document;
@@ -113,6 +113,8 @@ class FinancialDataRetentionTest extends TestCase
                 ->assertOk()->assertJsonPath('client_id', $this->client->id);
             $this->patchJson($url, ['client_id' => $other->id])->assertUnprocessable()->assertJsonValidationErrors('client_id');
         }
+        $this->patchJson('/api/quotes/'.$documents['quotes']['id'].'/status', ['status' => 'sent'])->assertOk();
+        $this->patchJson('/api/quotes/'.$documents['quotes']['id'].'/status', ['status' => 'accepted'])->assertOk();
         $this->postJson('/api/quotes/'.$documents['quotes']['id'].'/convert')->assertCreated()
             ->assertJsonPath('client.name', 'Historical client');
     }

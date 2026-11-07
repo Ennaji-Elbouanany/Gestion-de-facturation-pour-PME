@@ -56,13 +56,20 @@ def main(image, sha):
         for path in ['/composer.json', '/Dockerfile', '/.env']:
             assert request(path)[0] in (403, 404), 'Private files exposed'
         assert request('/api/user')[0] == 401
+        assert request('/api/dashboard/financial')[0] == 401
         docker('exec', name, 'php', '-r', "if (file_exists('/tmp/billing_test.sqlite')) exit(1); touch('/tmp/billing_test.sqlite'); chmod('/tmp/billing_test.sqlite', 0666);")
         docker('exec', name, 'php', 'bin/migrate-isolated.php', '--apply-isolated')
         status, body = request('/ready')
         assert status == 200 and json.loads(body)['release_sha'] == sha
-        seed = "require 'vendor/autoload.php'; $a=require 'bootstrap/app.php'; $a->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); $c=App\\Models\\Company::create(['name'=>'Container fixture']); $u=App\\Models\\User::create(['name'=>'Fixture','email'=>'fixture@example.test','password'=>Illuminate\\Support\\Facades\\Hash::make('local-test-only'),'company_id'=>$c->id,'role'=>'admin']); Illuminate\\Support\\Facades\\Cache::put('smoke-marker','kept',600); echo $u->createToken('smoke')->plainTextToken;"
+        seed = "require 'vendor/autoload.php'; $a=require 'bootstrap/app.php'; $a->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); $c=App\\Models\\Company::create(['name'=>'Container fixture']); $u=App\\Models\\User::forceCreate(['email_verified_at'=>now(),'name'=>'Fixture','email'=>'fixture@example.test','password'=>Illuminate\\Support\\Facades\\Hash::make('local-test-only'),'company_id'=>$c->id,'role'=>'admin']); Illuminate\\Support\\Facades\\Cache::put('smoke-marker','kept',600); echo $u->createToken('smoke')->plainTextToken;"
         token = docker('exec', name, 'php', '-r', seed)
         assert request('/api/user', token)[0] == 200, 'Sanctum Bearer header lost'
+        status, body = request('/api/dashboard/financial', token)
+        assert status == 200 and json.loads(body)['cache'] == 'disabled', 'Container financial SQL read failed'
+        for resource in ['clients', 'products', 'invoices', 'quotes', 'payments']:
+            status, body = request('/api/' + resource + '?per_page=25', token)
+            payload = json.loads(body)
+            assert status == 200 and payload['data'] == [] and payload['total'] == 0, 'Container paginated read failed'
         docker('restart', name)
         # Docker Desktop can allocate a different ephemeral host port on restart.
         base = public_base()
@@ -72,7 +79,7 @@ def main(image, sha):
         assert docker('exec', name, 'php', '-r', check) == 'kept', 'Restart purged shared cache'
         result = subprocess.run(['docker', 'exec', '-e', 'APP_ENV=production', name, 'php', 'bin/migrate-isolated.php', '--apply-isolated'], capture_output=True)
         assert result.returncode != 0, 'Production migration guard failed'
-        print('Container HTTP, dynamic port, readiness, Sanctum, private files, restart and migration guard: PASS')
+        print('Container HTTP, paginated/financial reads, dynamic port, readiness, Sanctum, private files, restart and migration guard: PASS')
     finally:
         if container and docker('inspect', '--format', '{{.Id}}', name) == container:
             docker('rm', '-f', '-v', name)

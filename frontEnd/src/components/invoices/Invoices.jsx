@@ -1,4 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { PageControls } from '../shared/ListControls'
+import { formatMoney } from '../../services/financialView'
+import RemoteSelect from '../shared/RemoteSelect'
+import { useServerList } from '../../hooks/useServerList'
+import ListControls from '../shared/ListControls'
+import { useState } from 'react'
 import { apiRequest } from '../../services/api'
 import { documentTotals, lineTotals } from '../../services/money'
 import { paymentDeadlineState, rebasePaymentCorrection, savePayment } from '../../services/paymentWorkflow'
@@ -51,18 +56,18 @@ const statusLabels = {
 
 function Invoices() {
   const { can } = usePermissions()
-  const [invoices, setInvoices] = useState([])
+  const list = useServerList('/api/invoices', { archived: '0' })
+  const { items: invoices, setItems: setInvoices, loading: isLoading, load: loadInvoices } = list
+  const pagination = list.meta
   const [viewedInvoice, setViewedInvoice] = useState(null)
-  const [clients, setClients] = useState([])
-  const [products, setProducts] = useState([])
   const [formData, setFormData] = useState(emptyForm)
   const [editingInvoice, setEditingInvoice] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState('')
   const [selectedInvoice, setSelectedInvoice] = useState(null)
   const [payments, setPayments] = useState([])
+  const [paymentPagination, setPaymentPagination] = useState(null)
   const [paymentForm, setPaymentForm] = useState(newPaymentForm)
   const [editingPayment, setEditingPayment] = useState(null)
   const [isPaymentsLoading, setIsPaymentsLoading] = useState(false)
@@ -72,45 +77,6 @@ function Invoices() {
   const invoicePreview = documentTotals(formData.items)
 
 
-  const loadInvoices = useCallback(async () => {
-    setIsLoading(true)
-    setMessage('')
-
-    try {
-      const response = await apiRequest('/api/invoices')
-      setInvoices(response)
-    } catch (error) {
-      setMessage(error.message)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  const loadClients = useCallback(async () => {
-    try {
-      const response = await apiRequest('/api/clients')
-      setClients(response)
-    } catch (error) {
-      setMessage(error.message)
-    }
-  }, [])
-
-  const loadProducts = useCallback(async () => {
-    try {
-      const response = await apiRequest('/api/products')
-      setProducts(response)
-    } catch (error) {
-      setMessage(error.message)
-    }
-  }, [])
-
-  useEffect(() => {
-    Promise.resolve().then(() => {
-      loadInvoices()
-      loadClients()
-      loadProducts()
-    })
-  }, [loadInvoices, loadClients, loadProducts])
 
   function handleChange(event) {
     setFormData((currentData) => ({
@@ -120,7 +86,7 @@ function Invoices() {
     setMessage('')
   }
 
-  function handleItemChange(index, event) {
+  function handleItemChange(index, event, selectedProduct) {
     const { name, value } = event.target
 
     setFormData((currentData) => {
@@ -131,7 +97,7 @@ function Invoices() {
 
         // Auto-fill description and unit_price when a product is selected
         if (name === 'product_id' && value) {
-          const product = products.find((p) => String(p.id) === String(value))
+          const product = selectedProduct
           if (product) {
             updatedItem.description = product.name
             updatedItem.unit_price = product.unit_price
@@ -168,7 +134,9 @@ function Invoices() {
     setIsFormOpen(true)
   }
 
-  function openEditForm(invoice) {
+  async function openEditForm(invoice) {
+    try { invoice = await apiRequest(`/api/invoices/${invoice.id}?include_payments=0`) }
+    catch (failure) { setMessage(failure.message); return }
     setEditingInvoice(invoice)
     setFormData({
       client_id: String(invoice.client_id || ''),
@@ -209,15 +177,13 @@ function Invoices() {
     try {
       const path = editingInvoice ? `/api/invoices/${editingInvoice.id}` : '/api/invoices'
       const method = editingInvoice ? 'PUT' : 'POST'
-      const invoice = await apiRequest(path, {
+      await apiRequest(path, {
         method,
         body: JSON.stringify(formData),
       })
 
-      setInvoices((currentInvoices) => editingInvoice
-        ? currentInvoices.map((currentInvoice) => currentInvoice.id === invoice.id ? invoice : currentInvoice)
-        : [invoice, ...currentInvoices])
       closeForm()
+      await loadInvoices()
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -235,6 +201,7 @@ function Invoices() {
       setPayments([])
       setEditingPayment(null)
       setMessage(action === 'archive' ? 'Brouillon archivé, historique conservé.' : 'Brouillon restauré.')
+      await loadInvoices()
     } catch (error) {
       setMessage(error.message)
     }
@@ -248,13 +215,14 @@ function Invoices() {
       })
       setInvoices((currentInvoices) => currentInvoices.map((currentInvoice) => currentInvoice.id === updatedInvoice.id ? updatedInvoice : currentInvoice))
       setMessage('Statut mis à jour avec succès.')
+      await loadInvoices()
     } catch (error) {
       setMessage(error.message)
     }
   }
 
   async function refreshInvoice(invoiceId) {
-    const refreshedInvoice = await apiRequest(`/api/invoices/${invoiceId}`)
+    const refreshedInvoice = await apiRequest(`/api/invoices/${invoiceId}?include_payments=0`)
     setInvoices((currentInvoices) => currentInvoices.map((invoice) => invoice.id === refreshedInvoice.id ? refreshedInvoice : invoice))
     setSelectedInvoice(refreshedInvoice)
     setIsPaymentSummaryStale(false)
@@ -273,10 +241,11 @@ function Invoices() {
 
     try {
       const [paymentList, refreshedInvoice] = await Promise.all([
-        apiRequest(`/api/invoices/${invoice.id}/payments`),
-        apiRequest(`/api/invoices/${invoice.id}`),
+        apiRequest(`/api/invoices/${invoice.id}/payments?per_page=25`),
+        apiRequest(`/api/invoices/${invoice.id}?include_payments=0`),
       ])
-      setPayments(paymentList)
+      setPayments(paymentList.data)
+      setPaymentPagination(paymentList)
       setSelectedInvoice(refreshedInvoice)
       setIsPaymentSummaryStale(false)
       setInvoices((currentInvoices) => currentInvoices.map((currentInvoice) => currentInvoice.id === refreshedInvoice.id ? refreshedInvoice : currentInvoice))
@@ -321,32 +290,28 @@ function Invoices() {
     setPaymentForm({ ...newPaymentForm(), payment_date: new Date().toISOString().slice(0, 10) })
   }
 
-  function paidTotal() {
-    return Number(selectedInvoice?.paid_amount || '0')
+  function paidTotal() { return selectedInvoice?.paid_amount || '0.00' }
+  function remainingBalance() { return selectedInvoice?.balance_due || '0.00' }
+  function isInvoicePaid() { return selectedInvoice?.payment_status === 'paid' }
+  function isInvoicePartial() { return selectedInvoice?.payment_status === 'partial' }
+
+  async function loadPaymentHistory(payment) {
+    try {
+      const detail = await apiRequest(`/api/invoices/${selectedInvoice.id}/payments/${payment.id}`)
+      setPayments((rows) => rows.map((row) => row.id === detail.id ? detail : row))
+      if (!detail.revisions.length) setMessage('Aucune correction pour ce règlement.')
+    } catch (failure) { setMessage(failure.message) }
   }
 
-  function remainingBalance() {
-    return Number(selectedInvoice?.balance_due || '0')
-  }
-
-  function isInvoicePaid() {
-    const total = Number(selectedInvoice?.total_amount) || 0
-    return selectedInvoice?.status === 'paid' || (total > 0 && paidTotal() >= total)
-  }
-
-  function isInvoicePartial() {
-    const total = Number(selectedInvoice?.total_amount) || 0
-    return selectedInvoice?.status === 'partial' || (total > 0 && paidTotal() > 0 && paidTotal() < total)
-  }
-
-  async function reloadPayments() {
+  async function reloadPayments(page = paymentPagination?.current_page || 1) {
     setIsPaymentsLoading(true)
     try {
       const [list] = await Promise.all([
-        apiRequest(`/api/invoices/${selectedInvoice.id}/payments`),
+        apiRequest(`/api/invoices/${selectedInvoice.id}/payments?per_page=25&page=${typeof page === 'number' ? page : 1}`),
         refreshInvoice(selectedInvoice.id),
       ])
-      setPayments(list)
+      setPayments(list.data)
+      setPaymentPagination(list)
     } catch (error) {
       setMessage(error.message)
     } finally {
@@ -401,11 +366,11 @@ function Invoices() {
         method: editingPayment ? 'PUT' : 'POST',
         form: paymentForm,
         onSaved(payment) {
-          setPayments((current) => [payment, ...current.filter((item) => item.id !== payment.id)])
+          setPayments((current) => [payment, ...current.filter((item) => item.id !== payment.id)].slice(0, 25))
           cancelEditPayment()
           setIsPaymentSummaryStale(true)
         },
-        refresh: () => refreshInvoice(selectedInvoice.id),
+        refresh: async () => { const invoice = await refreshInvoice(selectedInvoice.id); await reloadPayments(); return invoice },
       })
       setMessage(result.refreshError ? `${success} Le solde n’a pas pu être actualisé. Actualisez-le avant une nouvelle opération.` : success)
     } catch (error) {
@@ -416,11 +381,7 @@ function Invoices() {
     }
   }
 
-  function formatPrice(value) {
-    if (value === null) return '—'
-    const amount = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    return `${amount.format(Number(value) || 0)} DH`
-  }
+  function formatPrice(value) { return value === null ? '—' : formatMoney(value) }
 
   function formatDate(date) {
     if (!date) return '—'
@@ -458,7 +419,7 @@ function Invoices() {
         <div className="invoice-form-heading"><div><h2>{editingInvoice ? `Modifier la facture ${editingInvoice.invoice_number}` : 'Nouvelle facture'}</h2><p>Les champs marqués sont nécessaires.</p></div><button className="close-button" type="button" onClick={closeForm} aria-label="Fermer">×</button></div>
 
         <div className="invoice-form-grid">
-          <label>Client *<select name="client_id" value={formData.client_id} onChange={handleChange} required><option value="">— Sélectionner un client —</option>{editingInvoice?.client?.deleted_at && !clients.some((client) => String(client.id) === String(editingInvoice.client_id)) && <option value={editingInvoice.client_id}>{editingInvoice.client.name} (archivé)</option>}{clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select></label>
+          <label>Client *<RemoteSelect resource="clients" name="client_id" value={formData.client_id} onChange={handleChange} required selectedLabel={editingInvoice?.client?.name} /></label>
           <label>Date de facture *<input name="invoice_date" type="date" value={formData.invoice_date} onChange={handleChange} required /></label>
           <label>Date d'échéance<input name="due_date" type="date" value={formData.due_date} onChange={handleChange} /></label>
           <label>Statut<select name="status" value={formData.status} onChange={handleChange}>{Object.entries(statusLabels).filter(([value]) => value === 'draft' || (value === 'sent' && can('invoices.updateStatus'))).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
@@ -471,7 +432,7 @@ function Invoices() {
             <div className="invoice-item-row invoice-item-head"><span>PRODUIT</span><span>DESCRIPTION</span><span>QTÉ</span><span>PRIX UNITAIRE</span><span>TVA %</span><span>MONTANT</span><span /></div>
             {formData.items.map((item, index) => (
               <div className="invoice-item-row" key={index}>
-                <select name="product_id" value={item.product_id} onChange={(event) => handleItemChange(index, event)}><option value="">—</option>{products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select>
+                <RemoteSelect resource="products" name="product_id" value={item.product_id} selectedLabel={item.description} onChange={(event, row) => handleItemChange(index, event, row)} />
                 <input name="description" value={item.description} onChange={(event) => handleItemChange(index, event)} placeholder="Description" required />
                 <input name="quantity" type="number" step="0.01" min="0.01" value={item.quantity} onChange={(event) => handleItemChange(index, event)} required />
                 <input name="unit_price" type="number" step="0.01" min="0" value={item.unit_price} onChange={(event) => handleItemChange(index, event)} required />
@@ -527,13 +488,15 @@ function Invoices() {
 
         <div className="payments-history">
           <div className="payments-history-heading"><h3>Historique des paiements</h3><button className="refresh-button" type="button" disabled={isPaymentSubmitting} onClick={reloadPayments}>Actualiser</button></div>
-          {isPaymentsLoading ? <p className="empty-state">Chargement des paiements...</p> : payments.length === 0 ? <p className="empty-state">Aucun paiement enregistré pour cette facture.</p> : <div className="table-scroll"><table className="data-table payments-table"><thead><tr><th>DATE</th><th>MODE</th><th>RÉFÉRENCE</th><th className="num">MONTANT</th><th className="actions-col">ACTIONS</th></tr></thead><tbody>{payments.map((payment) => <tr key={payment.id}><td>{formatDate(payment.payment_date)}</td><td>{paymentMethodLabels[payment.payment_method] || payment.payment_method}</td><td>{payment.reference || '—'}{payment.revisions?.length > 0 && <details><summary>Corrections ({payment.revisions.length})</summary>{payment.revisions.map((revision) => <p key={revision.id}>{revision.actor_name} : {revision.reason} — {revision.before.amount} → {revision.after.amount}</p>)}</details>}</td><td className="num"><strong>{formatPrice(payment.amount)}</strong></td><td className="actions-cell"><div className="invoice-actions"><button type="button" disabled={isPaymentSubmitting} onClick={() => startEditPayment(payment)}>Modifier</button><span title="Les règlements sont conservés">Conservé</span></div></td></tr>)}</tbody></table></div>}
+          <PageControls meta={paymentPagination} busy={isPaymentsLoading} onPage={reloadPayments} />
+          {isPaymentsLoading ? <p className="empty-state">Chargement des paiements...</p> : payments.length === 0 ? <p className="empty-state">Aucun paiement enregistré pour cette facture.</p> : <div className="table-scroll"><table className="data-table payments-table"><thead><tr><th>DATE</th><th>MODE</th><th>RÉFÉRENCE</th><th className="num">MONTANT</th><th className="actions-col">ACTIONS</th></tr></thead><tbody>{payments.map((payment) => <tr key={payment.id}><td>{formatDate(payment.payment_date)}</td><td>{paymentMethodLabels[payment.payment_method] || payment.payment_method}</td><td>{payment.reference || '—'}{payment.revisions?.length > 0 && <details><summary>Corrections ({payment.revisions.length})</summary>{payment.revisions.map((revision) => <p key={revision.id}>{revision.actor_name} : {revision.reason} — {revision.before.amount} → {revision.after.amount}</p>)}</details>}</td><td className="num"><strong>{formatPrice(payment.amount)}</strong></td><td className="actions-cell"><div className="invoice-actions"><button type="button" onClick={() => loadPaymentHistory(payment)}>Historique</button><button type="button" disabled={isPaymentSubmitting} onClick={() => startEditPayment(payment)}>Modifier</button><span title="Les règlements sont conservés">Conservé</span></div></td></tr>)}</tbody></table></div>}
         </div>
       </section>}
 
+      <ListControls list={list} statuses={statusLabels} archives clients />
       <section className="invoices-panel">
-        <div className="invoices-panel-heading"><div><h2>Liste des factures</h2><p>Documents conservés. Les brouillons peuvent être archivés et restaurés.</p><p>{invoices.length} facture{invoices.length !== 1 ? 's' : ''}</p></div><div className="invoices-panel-tools">{can('payments.view') && <label className="payment-invoice-picker">Gérer les paiements<select value={selectedInvoice?.id || ''} onChange={(event) => { const invoice = invoices.find((item) => String(item.id) === event.target.value); if (invoice) openPaymentsManager(invoice) }}><option value="">Sélectionner une facture</option>{invoices.map((invoice) => <option key={invoice.id} value={invoice.id} disabled={Boolean(invoice.archived_at) || invoice.document_status !== 'issued'}>{invoice.invoice_number}{invoice.archived_at ? ' (archivé)' : ''}</option>)}</select></label>}<button className="refresh-button" type="button" onClick={loadInvoices}>Actualiser</button></div></div>
-        {isLoading ? <p className="empty-state">Chargement des factures...</p> : invoices.length === 0 ? <p className="empty-state">Aucune facture pour le moment. Créez votre première facture.</p> : <div className="table-scroll"><table className="data-table invoices-table"><thead><tr><th className="ref">N° FACTURE</th><th>CLIENT</th><th>DATE</th><th>ÉCHÉANCE</th><th className="num">HT</th><th className="num">TVA</th><th className="num">TTC</th><th className="center">PAIEMENT</th><th className="actions-col">ACTIONS</th></tr></thead><tbody>{invoices.map((invoice) => <tr key={invoice.id}><td className="ref"><strong title={invoice.invoice_number}>{invoice.invoice_number}{invoice.archived_at && <small> — Brouillon archivé</small>}</strong></td><td><span className="truncate" title={invoice.client?.name || '—'}>{invoice.client?.name || '—'}</span></td><td className="date">{formatDate(invoice.invoice_date)}</td><td className="date"><span className={`invoice-due-date ${paymentDeadlineState(invoice) || ''}`}>{formatDate(invoice.due_date)}{paymentDeadlineLabel(invoice) && <small>{paymentDeadlineLabel(invoice)}</small>}</span></td><td className="num">{formatPrice(invoice.subtotal)}</td><td className="num">{formatPrice(invoice.tax_amount)}</td><td className="num ttc"><strong>{formatPrice(invoice.total_amount)}</strong></td><td className="center"><span>{statusLabels[invoice.status] || invoice.status}</span>{can('invoices.updateStatus', invoice) && invoice.document_status !== 'cancelled' ? <select className={`status-select status-${invoice.status}`} disabled={Boolean(invoice.archived_at)} aria-label="Statut du document" value={invoice.document_status === 'issued' ? 'sent' : (invoice.document_status || invoice.status)} onChange={(event) => handleStatusChange(invoice, event.target.value)}>{Object.entries(statusLabels).filter(([value]) => invoice.document_status === 'issued' ? ['sent', 'cancelled'].includes(value) : value === 'draft' || value === 'sent').map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select> : null}</td><td className="actions-cell"><div className="invoice-actions"><button type="button" onClick={() => setViewedInvoice(invoice)}>Consulter</button>{can('payments.view', invoice) && invoice.document_status === 'issued' && <button className="payment-button" type="button" disabled={Boolean(invoice.archived_at)} onClick={() => openPaymentsManager(invoice)}>Paiements</button>}{can('invoices.update', invoice) && <button type="button" disabled={Boolean(invoice.archived_at)} onClick={() => openEditForm(invoice)}>Modifier</button>}{can(invoice.archived_at ? 'invoices.restore' : 'invoices.archive', invoice) && invoice.status === 'draft' && <button type="button" onClick={() => handleArchive(invoice)}>{invoice.archived_at ? 'Restaurer' : 'Archiver'}</button>}</div></td></tr>)}</tbody></table></div>}
+        <div className="invoices-panel-heading"><div><h2>Liste des factures</h2><p>Documents conservés. Les brouillons peuvent être archivés et restaurés.</p><p>{pagination?.total ?? invoices.length} facture{invoices.length !== 1 ? 's' : ''}</p></div><div className="invoices-panel-tools">{can('payments.view') && <label className="payment-invoice-picker">Gérer les paiements (page affichée)<select value={selectedInvoice?.id || ''} onChange={(event) => { const invoice = invoices.find((item) => String(item.id) === event.target.value); if (invoice) openPaymentsManager(invoice) }}><option value="">Sélectionner une facture</option>{invoices.map((invoice) => <option key={invoice.id} value={invoice.id} disabled={Boolean(invoice.archived_at) || invoice.document_status !== 'issued'}>{invoice.invoice_number}{invoice.archived_at ? ' (archivé)' : ''}</option>)}</select></label>}<button className="refresh-button" type="button" onClick={loadInvoices}>Actualiser</button></div></div>
+        {isLoading ? <p className="empty-state">Chargement des factures...</p> : invoices.length === 0 ? <p className="empty-state">Aucune facture pour le moment. Créez votre première facture.</p> : <div className="table-scroll"><table className="data-table invoices-table"><thead><tr><th className="ref">N° FACTURE</th><th>CLIENT</th><th>DATE</th><th>ÉCHÉANCE</th><th className="num">HT</th><th className="num">TVA</th><th className="num">TTC</th><th className="center">PAIEMENT</th><th className="actions-col">ACTIONS</th></tr></thead><tbody>{invoices.map((invoice) => <tr key={invoice.id}><td className="ref"><strong title={invoice.invoice_number}>{invoice.invoice_number}{invoice.archived_at && <small> — Brouillon archivé</small>}</strong></td><td><span className="truncate" title={invoice.client?.name || '—'}>{invoice.client?.name || '—'}</span></td><td className="date">{formatDate(invoice.invoice_date)}</td><td className="date"><span className={`invoice-due-date ${paymentDeadlineState(invoice) || ''}`}>{formatDate(invoice.due_date)}{paymentDeadlineLabel(invoice) && <small>{paymentDeadlineLabel(invoice)}</small>}</span></td><td className="num">{formatPrice(invoice.subtotal)}</td><td className="num">{formatPrice(invoice.tax_amount)}</td><td className="num ttc"><strong>{formatPrice(invoice.total_amount)}</strong></td><td className="center"><span>{statusLabels[invoice.status] || invoice.status}</span>{can('invoices.updateStatus', invoice) && invoice.document_status !== 'cancelled' ? <select className={`status-select status-${invoice.status}`} disabled={Boolean(invoice.archived_at)} aria-label="Statut du document" value={invoice.document_status === 'issued' ? 'sent' : (invoice.document_status || invoice.status)} onChange={(event) => handleStatusChange(invoice, event.target.value)}>{Object.entries(statusLabels).filter(([value]) => invoice.document_status === 'issued' ? ['sent', 'cancelled'].includes(value) : value === 'draft' || value === 'sent').map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select> : null}</td><td className="actions-cell"><div className="invoice-actions"><button type="button" onClick={async () => { try { setViewedInvoice(await apiRequest(`/api/invoices/${invoice.id}?include_payments=0`)) } catch (failure) { setMessage(failure.message) } }}>Consulter</button>{can('payments.view', invoice) && invoice.document_status === 'issued' && <button className="payment-button" type="button" disabled={Boolean(invoice.archived_at)} onClick={() => openPaymentsManager(invoice)}>Paiements</button>}{can('invoices.update', invoice) && <button type="button" disabled={Boolean(invoice.archived_at)} onClick={() => openEditForm(invoice)}>Modifier</button>}{can(invoice.archived_at ? 'invoices.restore' : 'invoices.archive', invoice) && invoice.status === 'draft' && <button type="button" onClick={() => handleArchive(invoice)}>{invoice.archived_at ? 'Restaurer' : 'Archiver'}</button>}</div></td></tr>)}</tbody></table></div>}
       </section>
     </section>
   )

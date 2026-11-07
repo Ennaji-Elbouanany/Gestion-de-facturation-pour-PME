@@ -8,6 +8,7 @@ use App\Services\FinancialTransaction;
 use App\Services\MoneyCalculator;
 use App\Support\BusinessValidation;
 use App\Support\CompanyCache;
+use App\Support\ListQuery;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,17 @@ class ProductController extends Controller
     {
         $this->authorize('viewAny', Product::class);
         $companyId = $request->user()->company_id;
+        if (ListQuery::requested($request)) {
+            $f = ListQuery::filters($request, 'products');
+            $query = Product::where('company_id', $companyId);
+            ListQuery::search($query, $f, ['products.name']);
+            ListQuery::dates($query, $f, 'products.created_at');
+            if (! empty($f['lookup'])) {
+                $query->select(['id', 'name', 'unit_price', 'tax_rate', 'created_at']);
+            }
+
+            return response()->json(ListQuery::page($query, $request, $f, 'products'));
+        }
         $products = CompanyCache::remember(
             CompanyCache::key($companyId, CompanyCache::PRODUCTS),
             now()->addMinutes(10),

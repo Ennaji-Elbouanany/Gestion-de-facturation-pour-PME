@@ -3,19 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Quote;
+use App\Services\DashboardMetricsService;
 use App\Support\CompanyCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    public function financial(Request $request): JsonResponse
+    {
+        return response()->json(app(DashboardMetricsService::class)->read($request->user(), $request))->header('Cache-Control', 'no-store');
+    }
+
     public function summary(Request $request): JsonResponse
     {
-        $this->authorize('viewAny', \App\Models\Company::class);
+        $this->authorize('viewAny', Company::class);
         $companyId = $request->user()->company_id;
 
         $summary = CompanyCache::remember(
@@ -33,7 +40,7 @@ class DashboardController extends Controller
             ]
         );
 
-        if (! $request->user()->can('viewFinancialStatistics', \App\Models\Company::class)) {
+        if (! $request->user()->can('viewFinancialStatistics', Company::class)) {
             $summary = array_intersect_key($summary, array_flip(['clients_count', 'products_count', 'invoices_count', 'quotes_count']));
         }
 

@@ -7,6 +7,8 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Services\MoneyCalculator;
 use App\Services\PaymentService;
+use App\Support\ListQuery;
+use App\Support\PaymentList;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,6 +18,10 @@ class PaymentController extends Controller
     {
         $this->ensureInvoiceBelongsToCompany($request, $invoice);
         $this->authorize('viewAny', [Payment::class, $invoice]);
+
+        if (ListQuery::requested($request)) {
+            return response()->json(PaymentList::response($request, $invoice->id));
+        }
 
         $payments = $invoice->payments()
             ->with('revisions')->latest()
@@ -36,6 +42,10 @@ class PaymentController extends Controller
     public function all(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Payment::class);
+        if (ListQuery::requested($request)) {
+            return response()->json(PaymentList::response($request));
+        }
+
         $payments = Payment::query()
             ->whereHas('invoice', static function ($query) use ($request) {
                 $query->where('company_id', $request->user()->company_id);

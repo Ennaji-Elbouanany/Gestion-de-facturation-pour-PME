@@ -8,6 +8,7 @@ use App\Services\QuoteConversionService;
 use App\Services\QuoteService;
 use App\Support\CompanyCache;
 use App\Support\InvoiceView;
+use App\Support\ListQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,6 +20,24 @@ class QuoteController extends Controller
     {
         $this->authorize('viewAny', Quote::class);
         $companyId = $request->user()->company_id;
+
+        if (ListQuery::requested($request)) {
+            $f = ListQuery::filters($request, 'quotes');
+            $query = Quote::where('quotes.company_id', $companyId)->leftJoin('clients', fn ($join) => $join->on('clients.id', '=', 'quotes.client_id')->on('clients.company_id', '=', 'quotes.company_id'));
+            ListQuery::archive($query, $f, 'quotes.archived_at');
+            ListQuery::dates($query, $f, 'quotes.quote_date');
+            ListQuery::search($query, $f, ['quotes.quote_number', 'clients.name']);
+            if (! empty($f['client_id'])) {
+                $query->where('quotes.client_id', $f['client_id']);
+            }
+            if (! empty($f['status'])) {
+                $query->where('quotes.status', $f['status']);
+            }
+            $query->select(['quotes.id', 'quotes.company_id', 'quotes.client_id', 'quotes.quote_number', 'quotes.quote_date', 'quotes.valid_until', 'quotes.status', 'quotes.subtotal', 'quotes.tax_amount', 'quotes.total_amount', 'quotes.archived_at', 'quotes.created_at', 'quotes.updated_at'])
+                ->with(['client:id,name,deleted_at', 'invoice']);
+
+            return response()->json(ListQuery::page($query, $request, $f, 'quotes'));
+        }
 
         return response()->json(CompanyCache::remember(CompanyCache::key($companyId, CompanyCache::QUOTES), now()->addMinutes(2),
             fn () => Quote::where('company_id', $companyId)->with(['client:id,name,deleted_at', 'items', 'invoice'])->latest()->get()));

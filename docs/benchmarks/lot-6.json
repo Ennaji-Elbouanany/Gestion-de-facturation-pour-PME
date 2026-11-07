@@ -1,0 +1,1285 @@
+{
+  "base_commit": "9afb18a433ff6e1967f54e2493048aa7794d7961",
+  "dataset": "synthetic_only_20_companies_10000_invoices_5000_quotes_7980_payments",
+  "runtime": {
+    "php": "8.2.35",
+    "mysql": "8.0.46",
+    "redis": "7.4.12",
+    "cpu": 1,
+    "container_mib": 512,
+    "php_memory_limit": "96M"
+  },
+  "method": "one warmup, five sequential HTTP kernel reads, median; test actor; excludes real auth, TLS, network, Aiven and browser; no simultaneous tests",
+  "before": [
+    {
+      "path": "/api/dashboard/summary",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 8.285,
+      "queries": 6,
+      "sql_ms": 6.27,
+      "bytes": 101,
+      "peak_delta_mb": 0.07
+    },
+    {
+      "path": "/api/dashboard/summary",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 19.143,
+      "queries": 6,
+      "sql_ms": 12.78,
+      "bytes": 101,
+      "peak_delta_mb": 0.07
+    },
+    {
+      "path": "/api/dashboard/summary",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 1.79,
+      "queries": 1,
+      "sql_ms": 0.59,
+      "bytes": 101,
+      "peak_delta_mb": 0.063
+    },
+    {
+      "path": "/api/clients",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 12.015,
+      "queries": 2,
+      "sql_ms": 1.56,
+      "bytes": 23644,
+      "peak_delta_mb": 0.294
+    },
+    {
+      "path": "/api/clients",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 14.575,
+      "queries": 2,
+      "sql_ms": 1.98,
+      "bytes": 23644,
+      "peak_delta_mb": 0.879
+    },
+    {
+      "path": "/api/clients",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 12.207,
+      "queries": 1,
+      "sql_ms": 0.69,
+      "bytes": 23644,
+      "peak_delta_mb": 1.319
+    },
+    {
+      "path": "/api/clients?per_page=25",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 6.521,
+      "queries": 3,
+      "sql_ms": 2.29,
+      "bytes": 7407,
+      "peak_delta_mb": 0.108
+    },
+    {
+      "path": "/api/clients?per_page=25",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 6.292,
+      "queries": 3,
+      "sql_ms": 2.24,
+      "bytes": 7407,
+      "peak_delta_mb": 0.108
+    },
+    {
+      "path": "/api/clients?per_page=25",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 6.371,
+      "queries": 3,
+      "sql_ms": 2.04,
+      "bytes": 7407,
+      "peak_delta_mb": 0.108
+    },
+    {
+      "path": "/api/products",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 8.58,
+      "queries": 2,
+      "sql_ms": 1.54,
+      "bytes": 9983,
+      "peak_delta_mb": 0.142
+    },
+    {
+      "path": "/api/products",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 10.13,
+      "queries": 2,
+      "sql_ms": 1.45,
+      "bytes": 9983,
+      "peak_delta_mb": 0.461
+    },
+    {
+      "path": "/api/products",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 8.247,
+      "queries": 1,
+      "sql_ms": 0.64,
+      "bytes": 9983,
+      "peak_delta_mb": 0.693
+    },
+    {
+      "path": "/api/quotes",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 107.512,
+      "queries": 5,
+      "sql_ms": 7.86,
+      "bytes": 214963,
+      "peak_delta_mb": 3.185
+    },
+    {
+      "path": "/api/quotes",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 117.231,
+      "queries": 5,
+      "sql_ms": 7.34,
+      "bytes": 214963,
+      "peak_delta_mb": 8.78
+    },
+    {
+      "path": "/api/quotes",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 116.353,
+      "queries": 1,
+      "sql_ms": 0.79,
+      "bytes": 214963,
+      "peak_delta_mb": 12.716
+    },
+    {
+      "path": "/api/invoices",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 1124.171,
+      "queries": 5,
+      "sql_ms": 17.04,
+      "bytes": 749500,
+      "peak_delta_mb": 11.247
+    },
+    {
+      "path": "/api/invoices",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 1164.786,
+      "queries": 5,
+      "sql_ms": 17.65,
+      "bytes": 749500,
+      "peak_delta_mb": 11.256
+    },
+    {
+      "path": "/api/invoices",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 1202.147,
+      "queries": 5,
+      "sql_ms": 17.64,
+      "bytes": 749500,
+      "peak_delta_mb": 11.247
+    },
+    {
+      "path": "/api/payments",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 238.039,
+      "queries": 5,
+      "sql_ms": 11.35,
+      "bytes": 532164,
+      "peak_delta_mb": 6.025
+    },
+    {
+      "path": "/api/payments",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 234.777,
+      "queries": 5,
+      "sql_ms": 11.85,
+      "bytes": 532164,
+      "peak_delta_mb": 6.025
+    },
+    {
+      "path": "/api/payments",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 258.239,
+      "queries": 5,
+      "sql_ms": 11.97,
+      "bytes": 532164,
+      "peak_delta_mb": 6.025
+    }
+  ],
+  "after": [
+    {
+      "path": "/api/dashboard/summary",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 7.974,
+      "queries": 6,
+      "sql_ms": 5.57,
+      "bytes": 101,
+      "peak_delta_mb": 0.069
+    },
+    {
+      "path": "/api/dashboard/summary",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 8.566,
+      "queries": 6,
+      "sql_ms": 5.36,
+      "bytes": 101,
+      "peak_delta_mb": 0.069
+    },
+    {
+      "path": "/api/dashboard/summary",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 1.894,
+      "queries": 1,
+      "sql_ms": 0.61,
+      "bytes": 101,
+      "peak_delta_mb": 0.063
+    },
+    {
+      "path": "/api/dashboard/financial",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 136.823,
+      "queries": 17,
+      "sql_ms": 127.76,
+      "bytes": 14721,
+      "peak_delta_mb": 0.214
+    },
+    {
+      "path": "/api/dashboard/financial",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 130.602,
+      "queries": 17,
+      "sql_ms": 121.94,
+      "bytes": 14721,
+      "peak_delta_mb": 0.214
+    },
+    {
+      "path": "/api/dashboard/financial",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 129.034,
+      "queries": 17,
+      "sql_ms": 120.68,
+      "bytes": 14721,
+      "peak_delta_mb": 0.214
+    },
+    {
+      "path": "/api/clients?per_page=25",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 6.907,
+      "queries": 3,
+      "sql_ms": 2.52,
+      "bytes": 7509,
+      "peak_delta_mb": 0.109
+    },
+    {
+      "path": "/api/clients?per_page=25",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 11.372,
+      "queries": 3,
+      "sql_ms": 3.3,
+      "bytes": 7509,
+      "peak_delta_mb": 0.109
+    },
+    {
+      "path": "/api/clients?per_page=25",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 6.633,
+      "queries": 3,
+      "sql_ms": 2.35,
+      "bytes": 7509,
+      "peak_delta_mb": 0.109
+    },
+    {
+      "path": "/api/products?per_page=25",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 8.536,
+      "queries": 3,
+      "sql_ms": 2.68,
+      "bytes": 5745,
+      "peak_delta_mb": 0.092
+    },
+    {
+      "path": "/api/products?per_page=25",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 7.243,
+      "queries": 3,
+      "sql_ms": 2.29,
+      "bytes": 5745,
+      "peak_delta_mb": 0.092
+    },
+    {
+      "path": "/api/products?per_page=25",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 7.884,
+      "queries": 3,
+      "sql_ms": 2.47,
+      "bytes": 5745,
+      "peak_delta_mb": 0.092
+    },
+    {
+      "path": "/api/quotes?per_page=25&archived=0",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 13.545,
+      "queries": 5,
+      "sql_ms": 4.36,
+      "bytes": 11617,
+      "peak_delta_mb": 0.187
+    },
+    {
+      "path": "/api/quotes?per_page=25&archived=0",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 14.602,
+      "queries": 5,
+      "sql_ms": 5.39,
+      "bytes": 11617,
+      "peak_delta_mb": 0.187
+    },
+    {
+      "path": "/api/quotes?per_page=25&archived=0",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 14.313,
+      "queries": 5,
+      "sql_ms": 4.86,
+      "bytes": 11617,
+      "peak_delta_mb": 0.187
+    },
+    {
+      "path": "/api/invoices?per_page=25&archived=0",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 27.895,
+      "queries": 3,
+      "sql_ms": 23.49,
+      "bytes": 13850,
+      "peak_delta_mb": 0.129
+    },
+    {
+      "path": "/api/invoices?per_page=25&archived=0",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 29.287,
+      "queries": 3,
+      "sql_ms": 25.05,
+      "bytes": 13850,
+      "peak_delta_mb": 0.129
+    },
+    {
+      "path": "/api/invoices?per_page=25&archived=0",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 28.404,
+      "queries": 3,
+      "sql_ms": 24.12,
+      "bytes": 13850,
+      "peak_delta_mb": 0.129
+    },
+    {
+      "path": "/api/payments?per_page=25",
+      "mode": "null",
+      "runs": 5,
+      "median_ms": 25.103,
+      "queries": 4,
+      "sql_ms": 22.11,
+      "bytes": 10173,
+      "peak_delta_mb": 0.121
+    },
+    {
+      "path": "/api/payments?per_page=25",
+      "mode": "miss",
+      "runs": 5,
+      "median_ms": 21.447,
+      "queries": 4,
+      "sql_ms": 18.73,
+      "bytes": 10173,
+      "peak_delta_mb": 0.121
+    },
+    {
+      "path": "/api/payments?per_page=25",
+      "mode": "hit",
+      "runs": 5,
+      "median_ms": 20.583,
+      "queries": 4,
+      "sql_ms": 17.87,
+      "bytes": 10173,
+      "peak_delta_mb": 0.121
+    }
+  ],
+  "plans_before": [
+    {
+      "stage": "baseline",
+      "query": "clients_page",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "clients",
+          "partitions": null,
+          "type": "ref",
+          "possible_keys": "clients_company_email_unique",
+          "key": "clients_company_email_unique",
+          "key_len": "8",
+          "ref": "const",
+          "rows": 100,
+          "filtered": 10,
+          "Extra": "Using where; Using filesort"
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Limit: 25 row(s)  (cost=1.75 rows=25) (actual time=0.768..0.773 rows=25 loops=1)\n    -> Sort: clients.created_at DESC, clients.id DESC, limit input to 25 row(s) per chunk  (cost=1.75 rows=100) (actual time=0.767..0.771 rows=25 loops=1)\n        -> Filter: (clients.deleted_at is null)  (cost=1.75 rows=100) (actual time=0.167..0.584 rows=90 loops=1)\n            -> Index lookup on clients using clients_company_email_unique (company_id=1)  (cost=1.75 rows=100) (actual time=0.148..0.557 rows=100 loops=1)\n"
+        }
+      ],
+      "median_ms": 0.863
+    },
+    {
+      "stage": "baseline",
+      "query": "products_page",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "products",
+          "partitions": null,
+          "type": "ref",
+          "possible_keys": "products_company_id_foreign",
+          "key": "products_company_id_foreign",
+          "key_len": "8",
+          "ref": "const",
+          "rows": 50,
+          "filtered": 100,
+          "Extra": "Using filesort"
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Limit: 25 row(s)  (cost=10.2 rows=25) (actual time=0.444..0.447 rows=25 loops=1)\n    -> Sort: products.created_at DESC, products.id DESC, limit input to 25 row(s) per chunk  (cost=10.2 rows=50) (actual time=0.444..0.445 rows=25 loops=1)\n        -> Index lookup on products using products_company_id_foreign (company_id=1)  (cost=10.2 rows=50) (actual time=0.0832..0.418 rows=50 loops=1)\n"
+        }
+      ],
+      "median_ms": 0.678
+    },
+    {
+      "stage": "baseline",
+      "query": "invoices_page",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "invoices",
+          "partitions": null,
+          "type": "ref",
+          "possible_keys": "invoices_company_number_unique,invoices_archived_at_index,invoices_source_quote_tenant_foreign",
+          "key": "invoices_company_number_unique",
+          "key_len": "8",
+          "ref": "const",
+          "rows": 500,
+          "filtered": 98.22167205810547,
+          "Extra": "Using where; Using filesort"
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Limit: 25 row(s)  (cost=174 rows=25) (actual time=6.53..6.54 rows=25 loops=1)\n    -> Sort: invoices.created_at DESC, invoices.id DESC, limit input to 25 row(s) per chunk  (cost=174 rows=500) (actual time=6.53..6.54 rows=25 loops=1)\n        -> Filter: (invoices.archived_at is null)  (cost=174 rows=500) (actual time=0.155..3.43 rows=475 loops=1)\n            -> Index lookup on invoices using invoices_company_number_unique (company_id=1)  (cost=174 rows=500) (actual time=0.154..3.36 rows=500 loops=1)\n"
+        }
+      ],
+      "median_ms": 2.032
+    },
+    {
+      "stage": "baseline",
+      "query": "quotes_page",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "quotes",
+          "partitions": null,
+          "type": "index_merge",
+          "possible_keys": "quotes_company_id_id_unique,quotes_company_number_unique,quotes_archived_at_index",
+          "key": "quotes_company_id_id_unique,quotes_archived_at_index",
+          "key_len": "8,5",
+          "ref": null,
+          "rows": 234,
+          "filtered": 99.9688720703125,
+          "Extra": "Using intersect(quotes_company_id_id_unique,quotes_archived_at_index); Using where; Using filesort"
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Limit: 25 row(s)  (cost=69.9 rows=25) (actual time=1.31..1.31 rows=25 loops=1)\n    -> Sort: quotes.created_at DESC, quotes.id DESC, limit input to 25 row(s) per chunk  (cost=69.9 rows=234) (actual time=1.31..1.31 rows=25 loops=1)\n        -> Filter: ((quotes.company_id = 1) and (quotes.archived_at is null))  (cost=69.9 rows=234) (actual time=0.42..1.2 rows=230 loops=1)\n            -> Intersect rows sorted by row ID  (cost=69.9 rows=234) (actual time=0.386..1.14 rows=230 loops=1)\n                -> Index range scan on quotes using quotes_company_id_id_unique over (company_id = 1)  (cost=0.432 rows=250) (actual time=0.178..0.274 rows=250 loops=1)\n                -> Index range scan on quotes using quotes_archived_at_index over (archived_at = NULL)  (cost=2.07 rows=4600) (actual time=0.0552..0.127 rows=230 loops=1)\n"
+        }
+      ],
+      "median_ms": 1.224
+    },
+    {
+      "stage": "baseline",
+      "query": "invoice_period",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "invoices",
+          "partitions": null,
+          "type": "ref",
+          "possible_keys": "invoices_company_number_unique,invoices_source_quote_tenant_foreign",
+          "key": "invoices_company_number_unique",
+          "key_len": "8",
+          "ref": "const",
+          "rows": 500,
+          "filtered": 1.910728931427002,
+          "Extra": "Using where"
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Filter: ((invoices.invoice_date >= DATE'2026-01-01') and (invoices.invoice_date < DATE'2026-04-01') and ((invoices.document_status = 'issued') or ((invoices.document_status is null) and (invoices.`status` not in ('draft','cancelled')))))  (cost=126 rows=9.55) (actual time=0.0885..0.66 rows=51 loops=1)\n    -> Index lookup on invoices using invoices_company_number_unique (company_id=1)  (cost=126 rows=500) (actual time=0.0813..0.611 rows=500 loops=1)\n"
+        }
+      ],
+      "median_ms": 1.097
+    },
+    {
+      "stage": "baseline",
+      "query": "invoice_payments",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "payments",
+          "partitions": null,
+          "type": "ref",
+          "possible_keys": "payments_invoice_id_idempotency_key_unique",
+          "key": "payments_invoice_id_idempotency_key_unique",
+          "key_len": "8",
+          "ref": "const",
+          "rows": 2,
+          "filtered": 100,
+          "Extra": "Using filesort"
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Limit: 25 row(s)  (cost=0.7 rows=2) (actual time=0.122..0.122 rows=2 loops=1)\n    -> Sort: payments.payment_date DESC, payments.id DESC, limit input to 25 row(s) per chunk  (cost=0.7 rows=2) (actual time=0.121..0.121 rows=2 loops=1)\n        -> Index lookup on payments using payments_invoice_id_idempotency_key_unique (invoice_id=2)  (cost=0.7 rows=2) (actual time=0.106..0.112 rows=2 loops=1)\n"
+        }
+      ],
+      "median_ms": 0.55
+    },
+    {
+      "stage": "baseline",
+      "query": "company_payments",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "i",
+          "partitions": null,
+          "type": "ref",
+          "possible_keys": "PRIMARY,invoices_company_number_unique,invoices_source_quote_tenant_foreign",
+          "key": "invoices_source_quote_tenant_foreign",
+          "key_len": "8",
+          "ref": "const",
+          "rows": 500,
+          "filtered": 100,
+          "Extra": "Using index; Using temporary; Using filesort"
+        },
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "p",
+          "partitions": null,
+          "type": "ref",
+          "possible_keys": "payments_invoice_id_idempotency_key_unique",
+          "key": "payments_invoice_id_idempotency_key_unique",
+          "key_len": "8",
+          "ref": "billing_lot6_audit_test.i.id",
+          "rows": 1,
+          "filtered": 100,
+          "Extra": null
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Limit: 25 row(s)  (actual time=2.72..2.72 rows=25 loops=1)\n    -> Sort: p.payment_date DESC, p.created_at DESC, p.id DESC, limit input to 25 row(s) per chunk  (actual time=2.72..2.72 rows=25 loops=1)\n        -> Stream results  (cost=284 rows=666) (actual time=0.064..2.57 rows=399 loops=1)\n            -> Nested loop inner join  (cost=284 rows=666) (actual time=0.0551..2.15 rows=399 loops=1)\n                -> Covering index lookup on i using invoices_source_quote_tenant_foreign (company_id=1)  (cost=50.6 rows=500) (actual time=0.0411..0.135 rows=500 loops=1)\n                -> Index lookup on p using payments_invoice_id_idempotency_key_unique (invoice_id=i.id)  (cost=0.333 rows=1.33) (actual time=0.00336..0.00389 rows=0.798 loops=500)\n"
+        }
+      ],
+      "median_ms": 2.56
+    },
+    {
+      "indexes": [
+        {
+          "table": "clients",
+          "indexes": [
+            {
+              "name": "clients_company_email_unique",
+              "columns": [
+                "company_id",
+                "email"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": false
+            },
+            {
+              "name": "primary",
+              "columns": [
+                "id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": true
+            }
+          ]
+        },
+        {
+          "table": "products",
+          "indexes": [
+            {
+              "name": "primary",
+              "columns": [
+                "id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": true
+            },
+            {
+              "name": "products_company_id_foreign",
+              "columns": [
+                "company_id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            }
+          ]
+        },
+        {
+          "table": "invoices",
+          "indexes": [
+            {
+              "name": "invoices_archived_at_index",
+              "columns": [
+                "archived_at"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "invoices_client_id_foreign",
+              "columns": [
+                "client_id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "invoices_company_number_unique",
+              "columns": [
+                "company_id",
+                "invoice_number"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": false
+            },
+            {
+              "name": "invoices_source_quote_tenant_foreign",
+              "columns": [
+                "company_id",
+                "source_quote_id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "invoices_source_quote_unique",
+              "columns": [
+                "source_quote_id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": false
+            },
+            {
+              "name": "invoices_user_id_foreign",
+              "columns": [
+                "user_id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "primary",
+              "columns": [
+                "id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": true
+            }
+          ]
+        },
+        {
+          "table": "quotes",
+          "indexes": [
+            {
+              "name": "primary",
+              "columns": [
+                "id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": true
+            },
+            {
+              "name": "quotes_archived_at_index",
+              "columns": [
+                "archived_at"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "quotes_client_id_foreign",
+              "columns": [
+                "client_id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "quotes_company_id_id_unique",
+              "columns": [
+                "company_id",
+                "id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": false
+            },
+            {
+              "name": "quotes_company_number_unique",
+              "columns": [
+                "company_id",
+                "quote_number"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": false
+            },
+            {
+              "name": "quotes_user_id_foreign",
+              "columns": [
+                "user_id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            }
+          ]
+        },
+        {
+          "table": "payments",
+          "indexes": [
+            {
+              "name": "payments_invoice_id_idempotency_key_unique",
+              "columns": [
+                "invoice_id",
+                "idempotency_key"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": false
+            },
+            {
+              "name": "primary",
+              "columns": [
+                "id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "plans_after": [
+    {
+      "stage": "after",
+      "query": "clients_page",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "clients",
+          "partitions": null,
+          "type": "ref",
+          "possible_keys": "clients_company_email_unique,clients_list_scope",
+          "key": "clients_list_scope",
+          "key_len": "13",
+          "ref": "const,const",
+          "rows": 90,
+          "filtered": 100,
+          "Extra": "Using where; Backward index scan"
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Limit: 25 row(s)  (cost=18.8 rows=25) (actual time=0.106..0.154 rows=25 loops=1)\n    -> Filter: (clients.deleted_at is null)  (cost=18.8 rows=90) (actual time=0.105..0.151 rows=25 loops=1)\n        -> Index lookup on clients using clients_list_scope (company_id=1, deleted_at=NULL) (reverse)  (cost=18.8 rows=90) (actual time=0.0562..0.101 rows=25 loops=1)\n"
+        }
+      ],
+      "median_ms": 0.941
+    },
+    {
+      "stage": "after",
+      "query": "products_page",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "products",
+          "partitions": null,
+          "type": "ref",
+          "possible_keys": "products_company_id_foreign",
+          "key": "products_company_id_foreign",
+          "key_len": "8",
+          "ref": "const",
+          "rows": 50,
+          "filtered": 100,
+          "Extra": "Using filesort"
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Limit: 25 row(s)  (cost=5.75 rows=25) (actual time=0.19..0.193 rows=25 loops=1)\n    -> Sort: products.created_at DESC, products.id DESC, limit input to 25 row(s) per chunk  (cost=5.75 rows=50) (actual time=0.189..0.191 rows=25 loops=1)\n        -> Index lookup on products using products_company_id_foreign (company_id=1)  (cost=5.75 rows=50) (actual time=0.0512..0.157 rows=50 loops=1)\n"
+        }
+      ],
+      "median_ms": 0.663
+    },
+    {
+      "stage": "after",
+      "query": "invoices_page",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "invoices",
+          "partitions": null,
+          "type": "ref",
+          "possible_keys": "invoices_company_number_unique,invoices_archived_at_index,invoices_source_quote_tenant_foreign,invoices_list_scope,invoices_period_scope",
+          "key": "invoices_list_scope",
+          "key_len": "13",
+          "ref": "const,const",
+          "rows": 475,
+          "filtered": 100,
+          "Extra": "Using where; Backward index scan"
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Limit: 25 row(s)  (cost=166 rows=25) (actual time=0.104..0.19 rows=25 loops=1)\n    -> Filter: (invoices.archived_at is null)  (cost=166 rows=475) (actual time=0.103..0.188 rows=25 loops=1)\n        -> Index lookup on invoices using invoices_list_scope (company_id=1, archived_at=NULL) (reverse)  (cost=166 rows=475) (actual time=0.103..0.186 rows=25 loops=1)\n"
+        }
+      ],
+      "median_ms": 0.783
+    },
+    {
+      "stage": "after",
+      "query": "quotes_page",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "quotes",
+          "partitions": null,
+          "type": "index_merge",
+          "possible_keys": "quotes_company_id_id_unique,quotes_company_number_unique,quotes_archived_at_index",
+          "key": "quotes_company_id_id_unique,quotes_archived_at_index",
+          "key_len": "8,5",
+          "ref": null,
+          "rows": 233,
+          "filtered": 99.64295959472656,
+          "Extra": "Using intersect(quotes_company_id_id_unique,quotes_archived_at_index); Using where; Using filesort"
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Limit: 25 row(s)  (cost=69.6 rows=25) (actual time=1.07..1.08 rows=25 loops=1)\n    -> Sort: quotes.created_at DESC, quotes.id DESC, limit input to 25 row(s) per chunk  (cost=69.6 rows=234) (actual time=1.07..1.08 rows=25 loops=1)\n        -> Filter: ((quotes.company_id = 1) and (quotes.archived_at is null))  (cost=69.6 rows=234) (actual time=0.364..0.927 rows=230 loops=1)\n            -> Intersect rows sorted by row ID  (cost=69.6 rows=234) (actual time=0.296..0.83 rows=230 loops=1)\n                -> Index range scan on quotes using quotes_company_id_id_unique over (company_id = 1)  (cost=0.432 rows=250) (actual time=0.188..0.28 rows=250 loops=1)\n                -> Index range scan on quotes using quotes_archived_at_index over (archived_at = NULL)  (cost=2.07 rows=4600) (actual time=0.076..0.147 rows=230 loops=1)\n"
+        }
+      ],
+      "median_ms": 1.301
+    },
+    {
+      "stage": "after",
+      "query": "invoice_period",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "invoices",
+          "partitions": null,
+          "type": "range",
+          "possible_keys": "invoices_company_number_unique,invoices_source_quote_tenant_foreign,invoices_list_scope,invoices_period_scope",
+          "key": "invoices_period_scope",
+          "key_len": "11",
+          "ref": null,
+          "rows": 63,
+          "filtered": 17.200000762939453,
+          "Extra": "Using index condition; Using where"
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Filter: ((invoices.document_status = 'issued') or ((invoices.document_status is null) and (invoices.`status` not in ('draft','cancelled'))))  (cost=28.6 rows=10.8) (actual time=0.054..0.274 rows=51 loops=1)\n    -> Index range scan on invoices using invoices_period_scope over (company_id = 1 AND '2026-01-01' <= invoice_date < '2026-04-01'), with index condition: ((invoices.company_id = 1) and (invoices.invoice_date >= DATE'2026-01-01') and (invoices.invoice_date < DATE'2026-04-01'))  (cost=28.6 rows=63) (actual time=0.0509..0.261 rows=63 loops=1)\n"
+        }
+      ],
+      "median_ms": 0.935
+    },
+    {
+      "stage": "after",
+      "query": "invoice_payments",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "payments",
+          "partitions": null,
+          "type": "ref",
+          "possible_keys": "payments_invoice_id_idempotency_key_unique",
+          "key": "payments_invoice_id_idempotency_key_unique",
+          "key_len": "8",
+          "ref": "const",
+          "rows": 2,
+          "filtered": 100,
+          "Extra": "Using filesort"
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Limit: 25 row(s)  (cost=0.7 rows=2) (actual time=0.0695..0.0699 rows=2 loops=1)\n    -> Sort: payments.payment_date DESC, payments.id DESC, limit input to 25 row(s) per chunk  (cost=0.7 rows=2) (actual time=0.0688..0.0692 rows=2 loops=1)\n        -> Index lookup on payments using payments_invoice_id_idempotency_key_unique (invoice_id=2)  (cost=0.7 rows=2) (actual time=0.0524..0.058 rows=2 loops=1)\n"
+        }
+      ],
+      "median_ms": 0.485
+    },
+    {
+      "stage": "after",
+      "query": "company_payments",
+      "plan": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "p",
+          "partitions": null,
+          "type": "ALL",
+          "possible_keys": "payments_invoice_id_idempotency_key_unique",
+          "key": null,
+          "key_len": null,
+          "ref": null,
+          "rows": 7736,
+          "filtered": 100,
+          "Extra": "Using filesort"
+        },
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "i",
+          "partitions": null,
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY,invoices_company_number_unique,invoices_source_quote_tenant_foreign,invoices_list_scope,invoices_period_scope",
+          "key": "PRIMARY",
+          "key_len": "8",
+          "ref": "billing_lot6_test.p.invoice_id",
+          "rows": 1,
+          "filtered": 5.258729457855225,
+          "Extra": "Using where"
+        }
+      ],
+      "analyze": [
+        {
+          "EXPLAIN": "-> Limit: 25 row(s)  (cost=3505 rows=25) (actual time=11.4..12.2 rows=25 loops=1)\n    -> Nested loop inner join  (cost=3505 rows=407) (actual time=11.4..12.2 rows=25 loops=1)\n        -> Sort: p.payment_date DESC, p.created_at DESC, p.id DESC  (cost=798 rows=7736) (actual time=11.2..11.2 rows=500 loops=1)\n            -> Table scan on p  (cost=798 rows=7736) (actual time=0.0133..5.45 rows=7980 loops=1)\n        -> Filter: (i.company_id = 1)  (cost=0.25 rows=0.0526) (actual time=0.00185..0.00186 rows=0.05 loops=500)\n            -> Single-row index lookup on i using PRIMARY (id=p.invoice_id)  (cost=0.25 rows=1) (actual time=0.00168..0.00171 rows=1 loops=500)\n"
+        }
+      ],
+      "median_ms": 11.055
+    },
+    {
+      "indexes": [
+        {
+          "table": "clients",
+          "indexes": [
+            {
+              "name": "clients_company_email_unique",
+              "columns": [
+                "company_id",
+                "email"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": false
+            },
+            {
+              "name": "clients_list_scope",
+              "columns": [
+                "company_id",
+                "deleted_at",
+                "created_at",
+                "id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "primary",
+              "columns": [
+                "id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": true
+            }
+          ]
+        },
+        {
+          "table": "products",
+          "indexes": [
+            {
+              "name": "primary",
+              "columns": [
+                "id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": true
+            },
+            {
+              "name": "products_company_id_foreign",
+              "columns": [
+                "company_id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            }
+          ]
+        },
+        {
+          "table": "invoices",
+          "indexes": [
+            {
+              "name": "invoices_archived_at_index",
+              "columns": [
+                "archived_at"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "invoices_client_id_foreign",
+              "columns": [
+                "client_id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "invoices_company_number_unique",
+              "columns": [
+                "company_id",
+                "invoice_number"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": false
+            },
+            {
+              "name": "invoices_list_scope",
+              "columns": [
+                "company_id",
+                "archived_at",
+                "created_at",
+                "id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "invoices_period_scope",
+              "columns": [
+                "company_id",
+                "invoice_date",
+                "id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "invoices_source_quote_tenant_foreign",
+              "columns": [
+                "company_id",
+                "source_quote_id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "invoices_source_quote_unique",
+              "columns": [
+                "source_quote_id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": false
+            },
+            {
+              "name": "invoices_user_id_foreign",
+              "columns": [
+                "user_id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "primary",
+              "columns": [
+                "id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": true
+            }
+          ]
+        },
+        {
+          "table": "quotes",
+          "indexes": [
+            {
+              "name": "primary",
+              "columns": [
+                "id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": true
+            },
+            {
+              "name": "quotes_archived_at_index",
+              "columns": [
+                "archived_at"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "quotes_client_id_foreign",
+              "columns": [
+                "client_id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            },
+            {
+              "name": "quotes_company_id_id_unique",
+              "columns": [
+                "company_id",
+                "id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": false
+            },
+            {
+              "name": "quotes_company_number_unique",
+              "columns": [
+                "company_id",
+                "quote_number"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": false
+            },
+            {
+              "name": "quotes_user_id_foreign",
+              "columns": [
+                "user_id"
+              ],
+              "type": "btree",
+              "unique": false,
+              "primary": false
+            }
+          ]
+        },
+        {
+          "table": "payments",
+          "indexes": [
+            {
+              "name": "payments_invoice_id_idempotency_key_unique",
+              "columns": [
+                "invoice_id",
+                "idempotency_key"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": false
+            },
+            {
+              "name": "primary",
+              "columns": [
+                "id"
+              ],
+              "type": "btree",
+              "unique": true,
+              "primary": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "cache_interleaving_after": {
+    "interleaving": "read,commit,invalidate,publish",
+    "cached": null,
+    "actual": 91
+  }
+}

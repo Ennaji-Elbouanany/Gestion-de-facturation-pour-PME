@@ -37,6 +37,8 @@ class FinancialRetentionMigrationTest extends TestCase
         $migration = $this->constraintsMigration();
         $migration->down();
         $columns = require database_path('migrations/2026_11_06_000001_add_retention_archive_columns.php');
+        $listIndexes = require database_path('migrations/2026_11_10_000001_add_measured_list_indexes.php');
+        $listIndexes->down(); // Newer dependent indexes must precede historical column rollback in this isolated fixture.
         $columns->down();
         $company = DB::table('companies')->insertGetId(['name' => 'Before upgrade']);
         $client = DB::table('clients')->insertGetId(['company_id' => $company, 'name' => 'Client']);
@@ -53,6 +55,7 @@ class FinancialRetentionMigrationTest extends TestCase
             'payment_date' => '2026-11-06', 'payment_method' => 'cash']);
         $before = $this->snapshot();
         $columns->up();
+        $listIndexes->up();
         $afterColumns = $this->snapshot();
         foreach ($afterColumns as $table => $rows) {
             foreach ($rows as $index => $row) {

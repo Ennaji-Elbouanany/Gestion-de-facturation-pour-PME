@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useServerList } from '../../hooks/useServerList'
+import ListControls from '../shared/ListControls'
+import { useState } from 'react'
 import FieldError from '../shared/FieldError'
 import { fieldProps, validateProduct } from '../../services/formValidation'
 import { useSubmission } from '../../hooks/useSubmission'
@@ -10,35 +12,17 @@ const emptyForm = { name: '', description: '', unit_price: '', tax_rate: '' }
 
 function Products() {
   const { can } = usePermissions()
-  const [products, setProducts] = useState([])
+  const list = useServerList('/api/products', {})
+  const { items: products, setItems: setProducts, loading: isLoading, load: loadProducts } = list
+  const pagination = list.meta
   const [formData, setFormData] = useState(emptyForm)
   const [editingProduct, setEditingProduct] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, submit] = useSubmission()
   const [message, setMessage] = useState('')
   const [errors, setErrors] = useState({})
 
 
-  const loadProducts = useCallback(async () => {
-    setIsLoading(true)
-    setMessage('')
-    setErrors({})
-
-    try {
-      const response = await apiRequest('/api/products')
-      setProducts(response)
-    } catch (error) {
-      setErrors(error.errors || {})
-      setMessage(error.message)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    Promise.resolve().then(loadProducts)
-  }, [loadProducts])
 
   function handleChange(event) {
     setFormData((currentData) => ({
@@ -87,15 +71,13 @@ function Products() {
       try {
         const path = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products'
         const method = editingProduct ? 'PUT' : 'POST'
-        const product = await apiRequest(path, {
+        await apiRequest(path, {
           method,
           body: JSON.stringify(formData),
         })
 
-        setProducts((currentProducts) => editingProduct
-          ? currentProducts.map((currentProduct) => currentProduct.id === product.id ? product : currentProduct)
-          : [product, ...currentProducts])
         closeForm()
+      await loadProducts()
       } catch (error) {
         setErrors(error.errors || {})
         setMessage(error.message)
@@ -111,6 +93,7 @@ function Products() {
         await apiRequest(`/api/products/${product.id}`, { method: 'DELETE' })
         setProducts((currentProducts) => currentProducts.filter((item) => item.id !== product.id))
         setMessage('Produit supprimé avec succès.')
+      await loadProducts()
       } catch (error) {
         setErrors(error.errors || {})
         setMessage(error.message)
@@ -143,8 +126,9 @@ function Products() {
         <div className="product-form-actions"><button className="cancel-button" type="button" onClick={closeForm}>Annuler</button><button className="primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</button></div>
       </form>}
 
+      <ListControls list={list} />
       <section className="products-panel">
-        <div className="products-panel-heading"><div><h2>Liste des produits</h2><p>{products.length} produit{products.length !== 1 ? 's' : ''}</p></div><button className="refresh-button" type="button" onClick={loadProducts}>Actualiser</button></div>
+        <div className="products-panel-heading"><div><h2>Liste des produits</h2><p>{pagination?.total ?? products.length} produit{products.length !== 1 ? 's' : ''}</p></div><button className="refresh-button" type="button" onClick={loadProducts}>Actualiser</button></div>
         {isLoading ? <p className="empty-state">Chargement des produits...</p> : products.length === 0 ? <p className="empty-state">Aucun produit pour le moment. Ajoutez votre premier produit.</p> : <div className="products-table"><div className="product-row product-row-head"><span>PRODUIT</span><span>DESCRIPTION</span><span>PRIX UNITAIRE</span><span>TVA</span><span>ACTIONS</span></div>{products.map((product) => <div className="product-row" key={product.id}><strong>{product.name}</strong><span>{product.description || '—'}</span><span>{formatPrice(product.unit_price)}</span><span>{product.tax_rate ? `${product.tax_rate} %` : '—'}</span><div className="product-actions">{can('products.update') && <button type="button" onClick={() => openEditForm(product)}>Modifier</button>}{can('products.delete') && <button className="delete-button" type="button" disabled={isSubmitting} onClick={() => handleDelete(product)}>Supprimer</button>}</div></div>)}</div>}
       </section>
     </section>

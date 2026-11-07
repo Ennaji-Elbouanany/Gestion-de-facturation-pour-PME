@@ -22,6 +22,7 @@ Route::middleware('throttle:login')->post('/reset-password', [AuthController::cl
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
 Route::middleware(['auth:sanctum', EnsureVerifiedAccount::class])->group(function (): void {
+    Route::get('/dashboard/financial', [DashboardController::class, 'financial']);
     Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
     Route::patch('/clients/{client}/restore', [ClientController::class, 'restore'])->withTrashed();
     Route::apiResource('clients', ClientController::class)->withTrashed(['destroy']);

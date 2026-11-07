@@ -9,7 +9,9 @@ use App\Services\FinancialTransaction;
 use App\Services\InvoiceService;
 use App\Services\MoneyCalculator;
 use App\Support\CompanyCache;
+use App\Support\DocumentList;
 use App\Support\InvoiceView;
+use App\Support\ListQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,6 +23,9 @@ class InvoiceController extends Controller
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Invoice::class);
+        if (ListQuery::requested($request)) {
+            return response()->json(DocumentList::invoices($request->user(), $request));
+        }
         $companyId = $request->user()->company_id;
         $invoices = Invoice::where('company_id', $companyId)->with(['client', 'items', 'payments'])->latest()->get();
 
@@ -63,7 +68,9 @@ class InvoiceController extends Controller
         $this->ensureBelongsToCompany($request, $invoice);
         $this->authorize('view', $invoice);
 
-        return response()->json(InvoiceView::one($invoice, $request->user(), true));
+        $request->validate(['include_payments' => ['sometimes', 'boolean']]);
+
+        return response()->json(InvoiceView::one($invoice, $request->user(), ! $request->has('include_payments') || $request->boolean('include_payments')));
     }
 
     public function update(Request $request, Invoice $invoice): JsonResponse

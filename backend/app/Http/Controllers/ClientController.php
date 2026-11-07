@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Services\FinancialTransaction;
 use App\Support\BusinessValidation;
 use App\Support\CompanyCache;
+use App\Support\ListQuery;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,17 +20,22 @@ class ClientController extends Controller
     {
         $this->authorize('viewAny', Client::class);
         $companyId = $request->user()->company_id;
-        $request->validate(['archived' => ['sometimes', 'boolean']]);
-        $archived = $request->boolean('archived');
         $query = Client::where('company_id', $companyId)->latest();
-        if ($archived) {
-            return response()->json($query->onlyTrashed()->paginate(max(1, min((int) $request->input('per_page', 25), 100))));
-        }
+        if (ListQuery::requested($request)) {
+            $f = ListQuery::filters($request, 'clients');
+            $archived = (string) ($f['archived'] ?? '0');
+            if ($archived === 'all') {
+                $query->withTrashed();
+            } elseif ($archived === '1') {
+                $query->onlyTrashed();
+            }
+            ListQuery::search($query, $f, ['clients.name', 'clients.email']);
+            ListQuery::dates($query, $f, 'clients.created_at');
+            if (! empty($f['lookup'])) {
+                $query->select(['id', 'name', 'deleted_at', 'created_at']);
+            }
 
-        if ($request->filled('per_page')) {
-            $perPage = max(1, min((int) $request->input('per_page'), 100));
-
-            return response()->json($query->paginate($perPage));
+            return response()->json(ListQuery::page($query, $request, $f, 'clients'));
         }
 
         $clients = CompanyCache::remember(

@@ -110,6 +110,7 @@ class SettingsTest extends TestCase
         $response = $this->actingAs($user)->patchJson('/api/settings/profile', [
             'name' => 'Nouveau Nom',
             'email' => 'nouveau@example.com',
+            'current_password' => 'Secret1234! PME',
         ]);
 
         $response->assertSuccessful();

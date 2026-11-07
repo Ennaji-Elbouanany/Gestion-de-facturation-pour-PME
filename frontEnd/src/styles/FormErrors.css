@@ -1,0 +1,2 @@
+.field-error { color: var(--color-danger, #b42318); font-size: .85rem; font-weight: 500; overflow-wrap: anywhere; }
+[aria-invalid="true"] { border-color: var(--color-danger, #b42318) !important; }

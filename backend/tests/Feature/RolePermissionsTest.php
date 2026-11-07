@@ -87,7 +87,7 @@ class RolePermissionsTest extends TestCase
             'line' => $line, 'notes' => ['notes' => 'Updated'], 'statusSent' => ['status' => 'sent'],
             'converted' => ['status' => 'converted'],
             'payment' => ['version' => 1, 'reason' => 'Correction contrôlée', 'amount' => 10, 'payment_date' => '2026-11-06', 'payment_method' => 'cash'],
-            'profile' => ['name' => 'Me', 'email' => 'new@example.test'],
+            'profile' => ['name' => 'Me', 'email' => 'new@example.test', 'current_password' => 'password'],
             'security' => ['current_password' => 'password', 'password' => 'NewSecret!2026', 'password_confirmation' => 'NewSecret!2026'],
             'company' => ['name' => 'Updated company'], 'billing' => ['currency' => 'MAD'],
             'documents' => ['invoice_prefix' => 'TEST-'], 'notifications' => ['notify_on_payment' => false],
@@ -264,6 +264,7 @@ class RolePermissionsTest extends TestCase
         $this->actingAs($this->actor);
         $before = $this->snapshot();
         foreach (['role' => 'employee', 'company_id' => 12345, 'permissions' => ['payments.view' => true]] as $field => $value) {
+            $this->travel(61)->seconds(); // Permission assertions are independent of the rate-limit window.
             foreach (['profile', 'security', 'company', 'billing', 'documents', 'notifications'] as $section) {
                 $this->patchJson('/api/settings/'.$section, [$field => $value])->assertUnprocessable()->assertJsonValidationErrors($field);
             }

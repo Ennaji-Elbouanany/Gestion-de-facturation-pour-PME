@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
+import FieldError from '../shared/FieldError'
+import { fieldProps, validateProduct } from '../../services/formValidation'
+import { useSubmission } from '../../hooks/useSubmission'
 import { apiRequest } from '../../services/api'
 import { usePermissions } from '../../hooks/usePermissions'
 import './Products.css'
@@ -12,18 +15,21 @@ function Products() {
   const [editingProduct, setEditingProduct] = useState(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSubmitting, submit] = useSubmission()
   const [message, setMessage] = useState('')
+  const [errors, setErrors] = useState({})
 
 
   const loadProducts = useCallback(async () => {
     setIsLoading(true)
     setMessage('')
+    setErrors({})
 
     try {
       const response = await apiRequest('/api/products')
       setProducts(response)
     } catch (error) {
+      setErrors(error.errors || {})
       setMessage(error.message)
     } finally {
       setIsLoading(false)
@@ -40,12 +46,14 @@ function Products() {
       [event.target.name]: event.target.value,
     }))
     setMessage('')
+    setErrors({})
   }
 
   function openCreateForm() {
     setEditingProduct(null)
     setFormData(emptyForm)
     setMessage('')
+    setErrors({})
     setIsFormOpen(true)
   }
 
@@ -58,6 +66,7 @@ function Products() {
       tax_rate: product.tax_rate || '',
     })
     setMessage('')
+    setErrors({})
     setIsFormOpen(true)
   }
 
@@ -69,38 +78,44 @@ function Products() {
 
   async function handleSubmit(event) {
     event.preventDefault()
-    setIsSubmitting(true)
-    setMessage('')
+    const validation = validateProduct(formData)
+    if (Object.keys(validation).length) { setErrors(validation); setMessage('Vérifiez les champs du formulaire.'); return }
+    return submit(async () => {
+      setMessage('')
+      setErrors({})
 
-    try {
-      const path = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products'
-      const method = editingProduct ? 'PUT' : 'POST'
-      const product = await apiRequest(path, {
-        method,
-        body: JSON.stringify(formData),
-      })
+      try {
+        const path = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products'
+        const method = editingProduct ? 'PUT' : 'POST'
+        const product = await apiRequest(path, {
+          method,
+          body: JSON.stringify(formData),
+        })
 
-      setProducts((currentProducts) => editingProduct
-        ? currentProducts.map((currentProduct) => currentProduct.id === product.id ? product : currentProduct)
-        : [product, ...currentProducts])
-      closeForm()
-    } catch (error) {
-      setMessage(error.message)
-    } finally {
-      setIsSubmitting(false)
-    }
+        setProducts((currentProducts) => editingProduct
+          ? currentProducts.map((currentProduct) => currentProduct.id === product.id ? product : currentProduct)
+          : [product, ...currentProducts])
+        closeForm()
+      } catch (error) {
+        setErrors(error.errors || {})
+        setMessage(error.message)
+      }
+    })
   }
 
   async function handleDelete(product) {
     if (!window.confirm(`Supprimer le produit ${product.name} ?`)) return
 
-    try {
-      await apiRequest(`/api/products/${product.id}`, { method: 'DELETE' })
-      setProducts((currentProducts) => currentProducts.filter((item) => item.id !== product.id))
-      setMessage('Produit supprimé avec succès.')
-    } catch (error) {
-      setMessage(error.message)
-    }
+    return submit(async () => {
+      try {
+        await apiRequest(`/api/products/${product.id}`, { method: 'DELETE' })
+        setProducts((currentProducts) => currentProducts.filter((item) => item.id !== product.id))
+        setMessage('Produit supprimé avec succès.')
+      } catch (error) {
+        setErrors(error.errors || {})
+        setMessage(error.message)
+      }
+    })
   }
 
   function formatPrice(value) {
@@ -120,17 +135,17 @@ function Products() {
       {isFormOpen && <form className="product-form" onSubmit={handleSubmit}>
         <div className="product-form-heading"><div><h2>{editingProduct ? 'Modifier le produit' : 'Nouveau produit'}</h2><p>Les champs marqués sont nécessaires.</p></div><button className="close-button" type="button" onClick={closeForm} aria-label="Fermer">×</button></div>
         <div className="product-form-grid">
-          <label>Nom du produit *<input name="name" value={formData.name} onChange={handleChange} required maxLength={255} /></label>
-          <label>Prix unitaire (DH) *<input name="unit_price" type="number" step="0.01" min="0" value={formData.unit_price} onChange={handleChange} required /></label>
-          <label>Taux de TVA (%)<input name="tax_rate" type="number" step="0.01" min="0" max="100" value={formData.tax_rate} onChange={handleChange} /></label>
-          <label className="product-form-full">Description<input name="description" value={formData.description} onChange={handleChange} /></label>
+          <label>Nom du produit *<input name="name" {...fieldProps('name', errors, 'product')} value={formData.name} onChange={handleChange} required maxLength={255} /><FieldError name="name" errors={errors} prefix="product" /></label>
+          <label>Prix unitaire (DH) *<input name="unit_price" {...fieldProps('unit_price', errors, 'product')} type="number" step="0.01" min="0" max="9999999999.99" value={formData.unit_price} onChange={handleChange} required /><FieldError name="unit_price" errors={errors} prefix="product" /></label>
+          <label>Taux de TVA (%)<input name="tax_rate" {...fieldProps('tax_rate', errors, 'product')} type="number" step="0.01" min="0" max="100" value={formData.tax_rate} onChange={handleChange} /><FieldError name="tax_rate" errors={errors} prefix="product" /></label>
+          <label className="product-form-full">Description<input name="description" {...fieldProps('description', errors, 'product')} maxLength={5000} value={formData.description} onChange={handleChange} /><FieldError name="description" errors={errors} prefix="product" /></label>
         </div>
         <div className="product-form-actions"><button className="cancel-button" type="button" onClick={closeForm}>Annuler</button><button className="primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</button></div>
       </form>}
 
       <section className="products-panel">
         <div className="products-panel-heading"><div><h2>Liste des produits</h2><p>{products.length} produit{products.length !== 1 ? 's' : ''}</p></div><button className="refresh-button" type="button" onClick={loadProducts}>Actualiser</button></div>
-        {isLoading ? <p className="empty-state">Chargement des produits...</p> : products.length === 0 ? <p className="empty-state">Aucun produit pour le moment. Ajoutez votre premier produit.</p> : <div className="products-table"><div className="product-row product-row-head"><span>PRODUIT</span><span>DESCRIPTION</span><span>PRIX UNITAIRE</span><span>TVA</span><span>ACTIONS</span></div>{products.map((product) => <div className="product-row" key={product.id}><strong>{product.name}</strong><span>{product.description || '—'}</span><span>{formatPrice(product.unit_price)}</span><span>{product.tax_rate ? `${product.tax_rate} %` : '—'}</span><div className="product-actions">{can('products.update') && <button type="button" onClick={() => openEditForm(product)}>Modifier</button>}{can('products.delete') && <button className="delete-button" type="button" onClick={() => handleDelete(product)}>Supprimer</button>}</div></div>)}</div>}
+        {isLoading ? <p className="empty-state">Chargement des produits...</p> : products.length === 0 ? <p className="empty-state">Aucun produit pour le moment. Ajoutez votre premier produit.</p> : <div className="products-table"><div className="product-row product-row-head"><span>PRODUIT</span><span>DESCRIPTION</span><span>PRIX UNITAIRE</span><span>TVA</span><span>ACTIONS</span></div>{products.map((product) => <div className="product-row" key={product.id}><strong>{product.name}</strong><span>{product.description || '—'}</span><span>{formatPrice(product.unit_price)}</span><span>{product.tax_rate ? `${product.tax_rate} %` : '—'}</span><div className="product-actions">{can('products.update') && <button type="button" onClick={() => openEditForm(product)}>Modifier</button>}{can('products.delete') && <button className="delete-button" type="button" disabled={isSubmitting} onClick={() => handleDelete(product)}>Supprimer</button>}</div></div>)}</div>}
       </section>
     </section>
   )

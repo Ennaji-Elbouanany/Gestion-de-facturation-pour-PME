@@ -2,8 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Company;
 use App\Models\Product;
+use App\Services\FinancialTransaction;
+use App\Services\MoneyCalculator;
+use App\Support\BusinessValidation;
 use App\Support\CompanyCache;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -27,17 +32,14 @@ class ProductController extends Controller
         $this->authorize('create', Product::class);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'unit_price' => ['required', 'numeric', 'min:0'],
-            'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
-        ]);
+            'description' => ['nullable', 'string', 'max:5000'],
+            'unit_price' => ['required', ...MoneyCalculator::rules()],
+            'tax_rate' => ['nullable', ...MoneyCalculator::rules(), 'max:100'],
+        ], BusinessValidation::messages(), BusinessValidation::attributes());
 
-        $product = Product::create([
-            ...$data,
-            'company_id' => $request->user()->company_id,
-        ]);
-
-        $this->forgetCompanyCaches($request->user()->company_id);
+        $product = $this->write($request, fn () => Product::create([
+            ...$data, 'tax_rate' => $data['tax_rate'] ?? '0', 'company_id' => $request->user()->company_id,
+        ]));
 
         return response()->json($product, 201);
     }
@@ -57,13 +59,20 @@ class ProductController extends Controller
 
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'description' => ['sometimes', 'nullable', 'string'],
-            'unit_price' => ['sometimes', 'required', 'numeric', 'min:0'],
-            'tax_rate' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:100'],
-        ]);
+            'description' => ['sometimes', 'nullable', 'string', 'max:5000'],
+            'unit_price' => ['sometimes', 'required', ...MoneyCalculator::rules()],
+            'tax_rate' => ['sometimes', 'nullable', ...MoneyCalculator::rules(), 'max:100'],
+        ], BusinessValidation::messages(), BusinessValidation::attributes());
 
-        $product->update($data);
-        $this->forgetCompanyCaches($request->user()->company_id);
+        if (array_key_exists('tax_rate', $data) && $data['tax_rate'] === null) {
+            $data['tax_rate'] = '0';
+        }
+        $product = $this->write($request, function () use ($product, $data): Product {
+            $locked = Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
+            $locked->update($data);
+
+            return $locked;
+        });
 
         return response()->json($product->fresh());
     }
@@ -72,8 +81,20 @@ class ProductController extends Controller
     {
         $this->ensureBelongsToCompany($request, $product);
         $this->authorize('delete', $product);
-        $product->delete();
-        $this->forgetCompanyCaches($request->user()->company_id);
+        try {
+            $this->write($request, function () use ($product): Product {
+                $locked = Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
+                abort_if($locked->invoiceItems()->exists() || $locked->quoteItems()->exists(), 409, 'Ce produit est utilisé par un document et doit être conservé.');
+                $locked->delete();
+
+                return $locked;
+            });
+        } catch (QueryException $exception) {
+            if (in_array((int) ($exception->errorInfo[1] ?? 0), [1451, 787], true)) {
+                abort(409, 'Ce produit est utilisé par un document et doit être conservé.');
+            }
+            throw $exception;
+        }
 
         return response()->json([
             'message' => 'Produit supprimé avec succès.',
@@ -88,12 +109,14 @@ class ProductController extends Controller
         );
     }
 
-    private function forgetCompanyCaches(int $companyId): void
+    private function write(Request $request, \Closure $work): Product
     {
-        CompanyCache::forget(
-            $companyId,
-            CompanyCache::PRODUCTS,
-            CompanyCache::DASHBOARD,
-        );
+        return FinancialTransaction::run(function () use ($request, $work): Product {
+            Company::whereKey($request->user()->company_id)->lockForUpdate()->firstOrFail();
+            $product = $work();
+            FinancialTransaction::invalidate($product->company_id, CompanyCache::PRODUCTS);
+
+            return $product;
+        });
     }
 }

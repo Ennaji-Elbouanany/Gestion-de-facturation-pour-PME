@@ -3,9 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
+use App\Models\Company;
+use App\Services\FinancialTransaction;
+use App\Support\BusinessValidation;
 use App\Support\CompanyCache;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ClientController extends Controller
 {
@@ -38,22 +44,10 @@ class ClientController extends Controller
     public function store(Request $request): JsonResponse
     {
         $this->authorize('create', Client::class);
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255', 'unique:clients,email'],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'tax_number' => ['nullable', 'string', 'max:100'],
-            'address' => ['nullable', 'string'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'country' => ['nullable', 'string', 'max:100'],
-        ]);
-
-        $client = Client::create([
-            ...$data,
-            'company_id' => $request->user()->company_id,
-        ]);
-
-        $this->forgetCompanyCaches($request->user()->company_id);
+        BusinessValidation::normalizeEmail($request);
+        $client = $this->write($request, function () use ($request): Client {
+            return Client::create([...$this->validated($request), 'company_id' => $request->user()->company_id]);
+        });
 
         return response()->json($client, 201);
     }
@@ -71,18 +65,13 @@ class ClientController extends Controller
         $this->ensureBelongsToCompany($request, $client);
         $this->authorize('update', $client);
 
-        $data = $request->validate([
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'email' => ['sometimes', 'nullable', 'email', 'max:255'],
-            'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
-            'tax_number' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'address' => ['sometimes', 'nullable', 'string'],
-            'city' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'country' => ['sometimes', 'nullable', 'string', 'max:100'],
-        ]);
+        BusinessValidation::normalizeEmail($request);
+        $client = $this->write($request, function () use ($request, $client): Client {
+            $locked = Client::where('company_id', $request->user()->company_id)->whereKey($client->id)->lockForUpdate()->firstOrFail();
+            $locked->update($this->validated($request, $locked));
 
-        $client->update($data);
-        $this->forgetCompanyCaches($request->user()->company_id);
+            return $locked;
+        });
 
         return response()->json($client->fresh());
     }
@@ -91,10 +80,14 @@ class ClientController extends Controller
     {
         $this->ensureBelongsToCompany($request, $client);
         $this->authorize('archive', $client);
-        if (! $client->trashed()) {
-            $client->delete();
-        }
-        $this->forgetCompanyCaches($request->user()->company_id);
+        $this->write($request, function () use ($client): Client {
+            $locked = Client::withTrashed()->whereKey($client->id)->lockForUpdate()->firstOrFail();
+            if (! $locked->trashed()) {
+                $locked->delete();
+            }
+
+            return $locked;
+        });
 
         return response()->json([
             'message' => 'Client archivé. Ses documents et règlements sont conservés.',
@@ -105,10 +98,14 @@ class ClientController extends Controller
     {
         $this->ensureBelongsToCompany($request, $client);
         $this->authorize('restore', $client);
-        if ($client->trashed()) {
-            $client->restore();
-        }
-        $this->forgetCompanyCaches($request->user()->company_id);
+        $client = $this->write($request, function () use ($client): Client {
+            $locked = Client::withTrashed()->whereKey($client->id)->lockForUpdate()->firstOrFail();
+            if ($locked->trashed()) {
+                $locked->restore();
+            }
+
+            return $locked;
+        });
 
         return response()->json(['message' => 'Client restauré.', 'client' => $client->fresh()]);
     }
@@ -121,14 +118,43 @@ class ClientController extends Controller
         );
     }
 
-    private function forgetCompanyCaches(int $companyId): void
+    private function validated(Request $request, ?Client $client = null): array
     {
-        CompanyCache::forget(
-            $companyId,
-            CompanyCache::CLIENTS,
-            CompanyCache::INVOICES,
-            CompanyCache::QUOTES,
-            CompanyCache::DASHBOARD,
-        );
+        $unique = Rule::unique('clients', 'email')->where('company_id', $request->user()->company_id);
+        if ($client) {
+            $unique->ignore($client->id);
+        }
+        $rules = [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255', $unique],
+            'phone' => BusinessValidation::phone(),
+            'tax_number' => BusinessValidation::fiscal(),
+            'address' => ['nullable', 'string', 'max:5000'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'country' => ['nullable', 'string', 'max:100'],
+        ];
+        if ($client) {
+            foreach ($rules as &$rule) {
+                array_unshift($rule, 'sometimes');
+            }
+            unset($rule);
+        }
+
+        return $request->validate($rules, BusinessValidation::messages(), BusinessValidation::attributes());
+    }
+
+    private function write(Request $request, \Closure $work): Client
+    {
+        try {
+            return FinancialTransaction::run(function () use ($request, $work): Client {
+                Company::whereKey($request->user()->company_id)->lockForUpdate()->firstOrFail();
+                $client = $work();
+                FinancialTransaction::invalidate($client->company_id, CompanyCache::CLIENTS, CompanyCache::QUOTES);
+
+                return $client;
+            });
+        } catch (UniqueConstraintViolationException $exception) {
+            throw ValidationException::withMessages(['email' => 'Cette adresse e-mail est déjà utilisée par un client de votre entreprise, y compris dans les archives.']);
+        }
     }
 }

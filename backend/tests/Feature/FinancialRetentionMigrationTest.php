@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Client;
 use App\Models\Company;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
@@ -67,10 +68,14 @@ class FinancialRetentionMigrationTest extends TestCase
         $this->assertEquals($before, $this->snapshot());
         $migration->up();
         $this->assertEquals($before, $this->snapshot());
-        // Rebuilds must retain null-on-delete product references and indexes too.
-        DB::table('products')->where('id', $product)->delete();
-        $this->assertDatabaseHas('invoice_items', ['invoice_id' => $invoice, 'product_id' => null, 'total' => 10]);
-        $this->assertDatabaseHas('quote_items', ['quote_id' => $quote, 'product_id' => null, 'total' => 10]);
+        // Lot 5 restrictions must survive the lot 1 table rebuilds.
+        try {
+            DB::transaction(fn () => DB::table('products')->where('id', $product)->delete());
+            $this->fail('Historical product must be retained');
+        } catch (QueryException $exception) {
+            $this->assertDatabaseHas('invoice_items', ['invoice_id' => $invoice, 'product_id' => $product, 'total' => 10]);
+            $this->assertDatabaseHas('quote_items', ['quote_id' => $quote, 'product_id' => $product, 'total' => 10]);
+        }
         $this->assertTrue(Schema::hasIndex('invoices', ['company_id', 'invoice_number'], 'unique'));
         $this->assertTrue(Schema::hasIndex('quotes', ['company_id', 'quote_number'], 'unique'));
         $this->assertTrue(Schema::hasIndex('invoices', ['archived_at']));

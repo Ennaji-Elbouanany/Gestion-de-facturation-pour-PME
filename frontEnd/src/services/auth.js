@@ -52,31 +52,37 @@ export async function authRequest(path, options = {}, fallbackError = 'Une erreu
     throw new Error('Connexion au serveur impossible. Réessayez.')
   }
 
-  let result = {}
-  const responseText = await response.text()
-
-  if (responseText.trim()) {
-    try {
-      result = JSON.parse(responseText)
-    } catch {
-      throw new Error(fallbackError)
-    }
-  }
-
   if (response.status === 401 && token && !publicPath) {
     clearAccessToken()
     window.dispatchEvent(new Event('ffactura:unauthorized'))
-    throw new Error('Votre session a expiré. Veuillez vous reconnecter.')
-  }
-
-  if (!response.ok) {
-    const error = new Error(response.status === 403
-      ? `Accès refusé : ${getReadableError(result, 'vous ne disposez pas des permissions nécessaires.')}`
-      : getReadableError(result, fallbackError))
-    error.status = response.status
-    error.errors = result?.errors || {}
+    const error = new Error('Votre session a expiré. Veuillez vous reconnecter.')
+    error.status = 401
+    error.errors = {}
     throw error
   }
+
+  let result = {}
+  let invalidBody = false
+  try {
+    const text = await response.text()
+    if (text.trim()) result = JSON.parse(text)
+    if (!result || typeof result !== 'object') { result = {}; invalidBody = true }
+  } catch { invalidBody = true }
+
+  if (!response.ok) {
+    const defaults = { 401: 'Adresse e-mail ou mot de passe incorrect.', 404: 'Ressource introuvable ou inaccessible.',
+      409: 'Les données ont changé ou cette action est impossible. Rechargez la page.',
+      422: 'Vérifiez les champs du formulaire.', 429: 'Trop de tentatives. Veuillez patienter avant de réessayer.' }
+    const message = response.status >= 500 ? 'Le serveur est temporairement indisponible. Réessayez ultérieurement.'
+      : response.status === 403 ? `Accès refusé : ${getReadableError(result, 'vous ne disposez pas des permissions nécessaires.')}`
+        : getReadableError(result, defaults[response.status] || fallbackError)
+    const error = new Error(message)
+    error.status = response.status
+    error.errors = result?.errors || {}
+    error.code = result?.code
+    throw error
+  }
+  if (invalidBody) throw new Error('Réponse du serveur invalide. Rechargez les données avant de réessayer.')
 
   if (path === '/api/register' || path === '/api/login') {
     if (typeof result.token !== 'string' || !result.token) {
@@ -84,6 +90,11 @@ export async function authRequest(path, options = {}, fallbackError = 'Une erreu
     }
 
     sessionStorage.setItem(TOKEN_KEY, result.token)
+  }
+
+  if (path === '/api/settings/security' && result.reauthenticate) {
+    clearAccessToken()
+    window.dispatchEvent(new CustomEvent('ffactura:reauthenticate', { detail: result.message }))
   }
 
   if (path === '/api/logout') {

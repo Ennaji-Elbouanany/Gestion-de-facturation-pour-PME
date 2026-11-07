@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Company extends Model
 {
@@ -30,6 +30,13 @@ class Company extends Model
         'notify_on_overdue',
         'logo',
     ];
+
+    protected function casts(): array
+    {
+        return ['payment_terms_days' => 'integer', 'default_tax_rate' => 'decimal:2',
+            'notify_on_new_invoice' => 'boolean', 'notify_on_payment' => 'boolean',
+            'notify_on_quote' => 'boolean', 'notify_on_overdue' => 'boolean'];
+    }
 
     public function users(): HasMany
     {

@@ -6,6 +6,7 @@ import ResetPassword from '../pages/auth/ResetPassword'
 import Dashboard from '../pages/dashboard/Dashboard'
 import Landing from '../pages/auth/Landing'
 import '../styles/App.css'
+import '../styles/FormErrors.css'
 import { authRequest, clearAccessToken, hasAccessToken } from '../services/auth'
 
 const protectedPaths = new Set(['/dashboard', '/payments', '/invoices', '/clients', '/products', '/quotes', '/settings'])
@@ -58,8 +59,16 @@ function App() {
       setPage('login')
     }
 
+    function handleReauthenticate(event) {
+      window.alert(event.detail || 'Mot de passe modifié. Veuillez vous reconnecter.')
+      handleUnauthorized()
+    }
     window.addEventListener('ffactura:unauthorized', handleUnauthorized)
-    return () => window.removeEventListener('ffactura:unauthorized', handleUnauthorized)
+    window.addEventListener('ffactura:reauthenticate', handleReauthenticate)
+    return () => {
+      window.removeEventListener('ffactura:unauthorized', handleUnauthorized)
+      window.removeEventListener('ffactura:reauthenticate', handleReauthenticate)
+    }
   }, [])
 
   useEffect(() => {

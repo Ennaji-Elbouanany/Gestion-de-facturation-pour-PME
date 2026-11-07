@@ -45,3 +45,31 @@ test('validation errors remain available to forms', async () => {
     error.status === 422 && error.errors.role[0] === 'Champ interdit.'
   ))
 })
+
+for (const status of [401, 403, 404, 409, 422, 429, 500]) {
+  test(`non JSON HTTP ${status} preserves its status and French fallback`, async () => {
+    const state = setup(status, {})
+    globalThis.fetch = async () => new Response('<html>upstream error</html>', { status })
+    await assert.rejects(authRequest('/api/clients'), (error) => error.status === status && !error.message.includes('<html>'))
+    assert.equal(state.tokens.has('ffactura_access_token'), status !== 401)
+  })
+}
+
+test('server errors do not expose SQL or infrastructure details', async () => {
+  setup(500, { message: 'SQLSTATE private-host secret', errors: {} })
+  await assert.rejects(authRequest('/api/clients'), (error) => error.status === 500 && !error.message.includes('SQLSTATE'))
+})
+
+test('password change clears the current token and asks the app to reconnect', async () => {
+  const state = setup(200, { message: 'Mot de passe modifié.', reauthenticate: true })
+  const original = globalThis.CustomEvent
+  globalThis.CustomEvent = class extends Event { constructor(type, options) { super(type); this.detail = options.detail } }
+  try {
+    await authRequest('/api/settings/security', { method: 'PATCH', body: '{}' })
+    assert.equal(state.tokens.has('ffactura_access_token'), false)
+    assert.deepEqual(state.events, ['ffactura:reauthenticate'])
+  } finally {
+    if (original === undefined) delete globalThis.CustomEvent
+    else globalThis.CustomEvent = original
+  }
+})

@@ -107,6 +107,11 @@ try {
             ? $service->update($actor, $invoiceId, $paymentId, ['amount'=>$amount,'version'=>1,'reason'=>'Concurrent test correction'])
             : $service->create($actor, $invoiceId, ['amount'=>$amount,'payment_date'=>date('Y-m-d'),'payment_method'=>'cash']));
         echo json_encode(['status'=>201,'id'=>$result->id]);
+    } elseif ($op[0] === 'http') {
+        [, $method, $path, $data] = $op;
+        $request = Illuminate\Http\Request::create($path,$method,[],[],[],['CONTENT_TYPE'=>'application/json','HTTP_ACCEPT'=>'application/json'],json_encode($data));
+        $response = $app->make(Illuminate\Contracts\Http\Kernel::class)->handle($request);
+        echo json_encode(['status'=>$response->getStatusCode()]);
     } else {
         [$kind, $entityId] = $op;
         $type = $kind === 'quote' ? 'quote' : 'invoice';

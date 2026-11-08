@@ -35,7 +35,7 @@ function Collaborators() {
   }, [])
 
   useEffect(() => {
-    refresh()
+    Promise.resolve().then(refresh)
   }, [refresh])
 
   async function handleInvite(event) {

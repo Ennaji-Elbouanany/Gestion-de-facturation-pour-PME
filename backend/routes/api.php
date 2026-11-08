@@ -9,6 +9,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\QuoteController;
 use App\Http\Controllers\QuoteItemController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Middleware\EnsureActiveUser;
 use App\Http\Middleware\EnsureVerifiedAccount;
 use App\Support\UserPermissions;
 use Illuminate\Http\Request;
@@ -19,9 +20,9 @@ Route::middleware('throttle:login')->post('/login', [AuthController::class, 'log
 Route::middleware('throttle:login')->post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::middleware('throttle:login')->post('/reset-password', [AuthController::class, 'resetPassword']);
 
-Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+Route::middleware(['auth:sanctum', EnsureActiveUser::class])->post('/logout', [AuthController::class, 'logout']);
 
-Route::middleware(['auth:sanctum', EnsureVerifiedAccount::class])->group(function (): void {
+Route::middleware(['auth:sanctum', EnsureActiveUser::class, EnsureVerifiedAccount::class])->group(function (): void {
     Route::get('/dashboard/financial', [DashboardController::class, 'financial']);
     Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
     Route::patch('/clients/{client}/restore', [ClientController::class, 'restore'])->withTrashed();
@@ -46,9 +47,9 @@ Route::get('/user', function (Request $request) {
     $user = $request->user();
 
     return response()->json([...$user->toArray(), 'permissions' => UserPermissions::for($user)]);
-})->middleware('auth:sanctum');
+})->middleware(['auth:sanctum', EnsureActiveUser::class]);
 
-Route::middleware('auth:sanctum')->group(function (): void {
+Route::middleware(['auth:sanctum', EnsureActiveUser::class])->group(function (): void {
     Route::get('/settings', [SettingsController::class, 'show']);
     Route::patch('/settings/profile', [SettingsController::class, 'updateProfile'])->middleware('throttle:account-security');
     Route::patch('/settings/company', [SettingsController::class, 'updateCompany']);

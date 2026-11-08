@@ -15,7 +15,7 @@ final class AccountSecurityService
     {
         return FinancialTransaction::run(function () use ($credentials): ?array {
             $user = User::where('email', $credentials['email'])->lockForUpdate()->first();
-            if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+            if (! $user || ! $user->is_active || ! Hash::check($credentials['password'], $user->password)) {
                 return null;
             }
             $token = $user->createToken('ffactura-spa', ['*'], now()->addHours(12));

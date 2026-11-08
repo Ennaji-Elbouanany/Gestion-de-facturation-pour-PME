@@ -32,8 +32,9 @@ class CollaboratorInvitationTest extends TestCase
 
     private function tokenFromMail(): string
     {
-        $mail = Mail::assertSent(CollaboratorInvitationMail::class, 1);
-        preg_match('/[?&]token=([a-zA-Z0-9]{64})/', $mail->first()->inviteUrl, $matches);
+        Mail::assertSent(CollaboratorInvitationMail::class, 1);
+        $mail = Mail::sent(CollaboratorInvitationMail::class)->first();
+        preg_match('/[?&]token=([a-zA-Z0-9]{64})/', $mail->inviteUrl, $matches);
         $this->assertCount(2, $matches);
 
         return $matches[1];

@@ -3,13 +3,14 @@ import RegisterForm from '../pages/auth/RegisterForm'
 import Login from '../pages/auth/Login'
 import ForgotPassword from '../pages/auth/ForgotPassword'
 import ResetPassword from '../pages/auth/ResetPassword'
+import AcceptInvitation from '../pages/auth/AcceptInvitation'
 import Dashboard from '../pages/dashboard/Dashboard'
 import Landing from '../pages/auth/Landing'
 import '../styles/App.css'
 import '../styles/FormErrors.css'
 import { authRequest, clearAccessToken, hasAccessToken } from '../services/auth'
 
-const protectedPaths = new Set(['/dashboard', '/payments', '/invoices', '/clients', '/products', '/quotes', '/settings'])
+const protectedPaths = new Set(['/dashboard', '/payments', '/invoices', '/clients', '/products', '/quotes', '/settings', '/collaborators'])
 
 function pageForPath(path) {
   const normalizedPath = path.replace(/\/+$/, '') || '/'
@@ -30,14 +31,15 @@ function sectionForPath(path) {
     '/products': 'Produits',
     '/quotes': 'Devis',
     '/settings': 'Paramètres',
+    '/collaborators': 'Collaborateurs',
   })[path.replace(/\/+$/, '') || '/'] || 'Vue d’ensemble'
 }
 
 function App() {
-  const searchParams = new URLSearchParams(window.location.search)
-  const isResetPasswordPage = window.location.pathname.replace(/\/$/, '') === '/reset-password'
-    || searchParams.has('token')
-  const initialPage = isResetPasswordPage ? 'reset-password' : pageForPath(window.location.pathname)
+  const pathname = window.location.pathname.replace(/\/$/, '')
+  const isInvitationPage = pathname === '/accept-invitation'
+  const isResetPasswordPage = pathname === '/reset-password'
+  const initialPage = isInvitationPage ? 'accept-invitation' : isResetPasswordPage ? 'reset-password' : pageForPath(window.location.pathname)
   const [page, setPage] = useState(() => initialPage)
   const [dashboardPath, setDashboardPath] = useState(() => window.location.pathname)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -87,7 +89,8 @@ function App() {
 
   useEffect(() => {
     function handlePopState() {
-      setPage(pageForPath(window.location.pathname))
+      const path = window.location.pathname.replace(/\/$/, '')
+      setPage(path === '/accept-invitation' ? 'accept-invitation' : path === '/reset-password' ? 'reset-password' : pageForPath(window.location.pathname))
       setDashboardPath(window.location.pathname)
     }
 
@@ -142,6 +145,7 @@ function App() {
       Produits: '/products',
       Devis: '/quotes',
       Paramètres: '/settings',
+      Collaborateurs: '/collaborators',
     }
     const path = sectionPaths[section] || '/dashboard'
 
@@ -194,6 +198,8 @@ function App() {
       <ForgotPassword onLoginClick={showLogin} />
     ) : page === 'reset-password' ? (
       <ResetPassword onLoginClick={showLogin} />
+    ) : page === 'accept-invitation' ? (
+      <AcceptInvitation onLoginClick={showLogin} />
     ) : (
       <RegisterForm
         onLoginClick={showLogin}

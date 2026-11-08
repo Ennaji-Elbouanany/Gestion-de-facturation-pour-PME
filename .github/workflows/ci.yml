@@ -53,6 +53,12 @@ jobs:
       - name: Run database migrations
         run: php artisan migrate --force
 
+      - name: Verify test database isolation
+        run: |
+          test -f phpunit.xml
+          test "${DB_CONNECTION:-sqlite}" = "sqlite"
+          test -z "${DB_URL:-}"
+          test -f database/database.sqlite
       - name: Run PHPUnit tests
         run: php artisan test
 
@@ -100,6 +106,14 @@ jobs:
       - run: |
           cp .env.example .env
           php artisan key:generate --force
+      - name: Verify isolated MySQL test target
+        run: |
+          test -f phpunit.xml
+          test "$APP_ENV" = "testing"
+          test "$DB_CONNECTION" = "mysql"
+          test "$DB_HOST" = "127.0.0.1"
+          test "$DB_DATABASE" = "retention_test"
+          test -z "$DB_URL"
       - name: Test backend on MySQL
         run: php artisan test
 

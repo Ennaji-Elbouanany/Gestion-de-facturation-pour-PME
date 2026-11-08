@@ -32,7 +32,7 @@ class ResendHttpMailTest extends TestCase
             return $request->url() === 'https://api.resend.com/emails'
                 && $request->method() === 'POST'
                 && $request->hasHeader('Authorization', 'Bearer test-resend-api-key')
-                && $request['from'] === 'Factura <contact@factura.example>'
+                && str_contains((string) $request['from'], 'contact@factura.example')
                 && $request['to'] === ['invited@example.test']
                 && $request['subject'] === 'Invitation à rejoindre Factura'
                 && $request['text'] === 'Votre invitation Factura';

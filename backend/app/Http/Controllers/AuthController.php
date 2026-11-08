@@ -131,6 +131,7 @@ class AuthController extends Controller
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
                 'role' => UserRole::Admin->value,
+                'is_active' => true,
             ]);
             $user->save();
 

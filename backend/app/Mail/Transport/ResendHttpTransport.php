@@ -4,13 +4,10 @@ namespace App\Mail\Transport;
 
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
-use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mailer\Transport\AbstractTransport;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
-use Symfony\Component\Mime\Part\DataPart;
-use Symfony\Component\Mime\Part\Multipart\MixedPart;
 
 final class ResendHttpTransport extends AbstractTransport
 {

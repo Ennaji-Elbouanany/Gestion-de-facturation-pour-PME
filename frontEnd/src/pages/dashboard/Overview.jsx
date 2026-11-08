@@ -354,10 +354,10 @@ function Overview({ user, onNavigate }) {
           <section className="panels-grid">
             <article className="panel-card">
               <div className="chart-card__head"><div><h2>Échéances &amp; retards</h2><p>Surveillez vos créances</p></div></div>
-              {stats.overdueList.length === 0 && stats.upcomingList.length === 0 ? <p className="dash-empty-text">Aucune échéance à surveiller.</p> : (
+              {stats.overdueInvoices.length === 0 && stats.upcomingList.length === 0 ? <p className="dash-empty-text">Aucune échéance à surveiller.</p> : (
                 <div className="due-list">
-                  {stats.overdueList.length > 0 && <p className="due-heading due-heading--late">En retard ({stats.overdueList.length})</p>}
-                  {stats.overdueList.slice(0, 4).map((invoice) => (
+                  {stats.overdueInvoices.length > 0 && <p className="due-heading due-heading--late">En retard ({stats.overdueInvoices.length})</p>}
+                  {stats.overdueInvoices.slice(0, 4).map((invoice) => (
                     <div className="due-item due-item--late" key={invoice.id}>
                       <div className="due-item__main"><strong>{invoice.invoice_number}</strong><small>{invoice.client?.name || 'Client'}</small></div>
                       <span className="due-item__due">Échue le {formatDate(invoice.due_date) === '—' ? '—' : formatDate(invoice.due_date)}</span>

@@ -1,5 +1,4 @@
-import { formatMoney } from './financialView'
-import { apiRequest } from './api'
+import { formatMoney } from './financialView.js'
 
 export function escapeDocumentHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({
@@ -106,7 +105,7 @@ export function buildPrintableDocument(kind, document, companySettings) {
     'Document en lecture seule, préparé pour impression A4.</footer></body></html>'
 }
 
-export async function printCommercialDocument(kind, id) {
+export async function printCommercialDocument(kind, id, apiRequest) {
   // User click: open the tab before awaiting any requests to avoid popup blocking.
   const popup = window.open('', '_blank')
   if (!popup) throw new Error('Autorisez les fenêtres pop-up pour imprimer le document.')

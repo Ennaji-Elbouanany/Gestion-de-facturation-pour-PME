@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Mail\Transport\ResendHttpTransport;
 use App\Models\Client;
 use App\Models\Company;
 use App\Models\Invoice;
@@ -19,6 +20,7 @@ use App\Policies\UserPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -37,6 +39,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Resend uses HTTPS (443), not SMTP ports blocked by free hosting.
+        Mail::extend('resend_http', fn (array $config) => new ResendHttpTransport(
+            (string) config('services.resend.key', ''),
+        ));
+
         Gate::policy(Client::class, ClientPolicy::class);
         Gate::policy(Product::class, ProductPolicy::class);
         Gate::policy(Invoice::class, InvoicePolicy::class);

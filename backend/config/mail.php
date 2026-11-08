@@ -37,6 +37,10 @@ return [
 
     'mailers' => [
 
+        'resend_http' => [
+            'transport' => 'resend_http',
+        ],
+
         'smtp' => [
             'transport' => 'smtp',
             'scheme' => env('MAIL_SCHEME', 'smtp'),

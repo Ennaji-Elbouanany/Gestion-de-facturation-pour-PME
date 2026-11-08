@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\QuoteController;
@@ -19,6 +20,8 @@ Route::middleware('throttle:login')->post('/register', [AuthController::class, '
 Route::middleware('throttle:login')->post('/login', [AuthController::class, 'login']);
 Route::middleware('throttle:login')->post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::middleware('throttle:login')->post('/reset-password', [AuthController::class, 'resetPassword']);
+Route::middleware('throttle:login')->get('/invitations/validate', [InvitationController::class, 'inspect']);
+Route::middleware('throttle:login')->post('/invitations/accept', [InvitationController::class, 'accept']);
 
 Route::middleware(['auth:sanctum', EnsureActiveUser::class])->post('/logout', [AuthController::class, 'logout']);
 
@@ -50,6 +53,9 @@ Route::get('/user', function (Request $request) {
 })->middleware(['auth:sanctum', EnsureActiveUser::class]);
 
 Route::middleware(['auth:sanctum', EnsureActiveUser::class])->group(function (): void {
+    Route::get('/invitations', [InvitationController::class, 'index']);
+    Route::post('/invitations', [InvitationController::class, 'store'])->middleware('throttle:account-security');
+    Route::delete('/invitations/{invitation}', [InvitationController::class, 'destroy'])->middleware('throttle:account-security');
     Route::get('/settings', [SettingsController::class, 'show']);
     Route::patch('/settings/profile', [SettingsController::class, 'updateProfile'])->middleware('throttle:account-security');
     Route::patch('/settings/company', [SettingsController::class, 'updateCompany']);

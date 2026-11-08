@@ -30,7 +30,7 @@ function getReadableError(result, fallback) {
 }
 
 export async function authRequest(path, options = {}, fallbackError = 'Une erreur est survenue.') {
-  const publicPath = ['/api/login', '/api/register', '/api/forgot-password', '/api/reset-password'].includes(path)
+  const publicPath = ['/api/login', '/api/register', '/api/forgot-password', '/api/reset-password', '/api/invitations/accept'].includes(path) || path.startsWith('/api/invitations/validate?')
   const token = publicPath ? null : sessionStorage.getItem(TOKEN_KEY)
   const headers = {
     Accept: 'application/json',

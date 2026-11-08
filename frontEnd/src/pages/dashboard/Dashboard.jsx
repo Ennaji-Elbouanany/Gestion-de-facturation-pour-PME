@@ -12,6 +12,7 @@ import { apiRequest } from '../../services/api'
 import { PermissionsContext } from '../../contexts/PermissionsContext'
 import { allows } from '../../services/permissions'
 import EmployeeOverview from './EmployeeOverview'
+import Collaborators from '../../components/collaborators/Collaborators'
 
 const navigation = [
   { label: 'Vue d’ensemble', icon: '⌂' },
@@ -20,6 +21,7 @@ const navigation = [
   { label: 'Clients', icon: '♙' },
   { label: 'Produits', icon: '□' },
   { label: 'Devis', icon: '◫' },
+  { label: 'Collaborateurs', icon: '♧' },
 ]
 
 
@@ -55,7 +57,7 @@ function Dashboard({ initialSection = 'Vue d’ensemble', onNavigate, onLogout, 
         <button className="brand-lockup brand-link" type="button" onClick={onGoToLanding} aria-label="Retourner à l'accueil de Factura"><span className="brand-mark">F</span><span>Factura</span></button>
         <p className="sidebar-label">Espace de travail</p>
         <nav className="dashboard-nav" aria-label="Navigation principale">
-          {navigation.filter((item) => item.label !== 'Paiements' || can('payments.view')).map((item) => <button className={activeItem === item.label ? 'nav-item active' : 'nav-item'} key={item.label} onClick={() => onNavigate?.(item.label)} type="button"><span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}</button>)}
+          {navigation.filter((item) => (item.label !== 'Paiements' || can('payments.view')) && (item.label !== 'Collaborateurs' || user?.role === 'admin')).map((item) => <button className={activeItem === item.label ? 'nav-item active' : 'nav-item'} key={item.label} onClick={() => onNavigate?.(item.label)} type="button"><span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}</button>)}
         </nav>
         <div className="sidebar-bottom">
           <button className="nav-item" type="button" onClick={handleToggleTheme} aria-pressed={isDark}><span className="nav-icon" aria-hidden="true">{isDark ? '☀' : '☾'}</span>{isDark ? 'Mode clair' : 'Mode sombre'}</button>
@@ -66,7 +68,7 @@ function Dashboard({ initialSection = 'Vue d’ensemble', onNavigate, onLogout, 
 
       <section className="dashboard-content">
         {profileError ? <p role="alert">{profileError}</p> : !user ? <p role="status">Chargement des permissions...</p> :
-          activeItem === 'Paramètres' ? <Settings /> : !can('dashboard.view') ? <p role="alert">Accès métier indisponible : votre rôle ou votre entreprise doit être vérifié par un administrateur.</p> :
+          activeItem === 'Paramètres' ? <Settings /> : activeItem === 'Collaborateurs' ? (user.role === 'admin' ? <Collaborators /> : <p role="alert">Accès réservé aux administrateurs.</p>) : !can('dashboard.view') ? <p role="alert">Accès métier indisponible : votre rôle ou votre entreprise doit être vérifié par un administrateur.</p> :
           activeItem === 'Paiements' ? (can('payments.view') ? <Payments /> : <p role="alert">Accès refusé : la consultation des règlements est réservée aux administrateurs et comptables.</p>) : activeItem === 'Clients' ? <Clients /> : activeItem === 'Produits' ? <Products /> : activeItem === 'Factures' ? <Invoices /> : activeItem === 'Devis' ? <Quotes /> :
           can('dashboard.financial') ? <Overview user={user} onNavigate={onNavigate} /> : <EmployeeOverview onNavigate={onNavigate} />}
 
